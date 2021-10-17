@@ -5,46 +5,46 @@ use crate::{
     WithData,
 };
 
-pub struct Reactions<'backend, TB: Backend<'backend>, TR: ReactionType> {
+pub struct ReactionsQuery<'backend, TB: Backend<'backend>, TR: ReactionType> {
     pub(crate) backend: &'backend TB,
     reaction_type: PhantomData<TR>,
 }
 
-pub struct Reaction<'backend, TB: Backend<'backend>, TR: ReactionType> {
+pub struct ReactionQuery<'backend, TB: Backend<'backend>, TR: ReactionType> {
     pub(crate) reaction_id: String,
     pub(crate) backend: &'backend TB,
     pub(crate) reaction_type: PhantomData<TR>,
 }
 
-pub struct UserReactions<'backend, TB: Backend<'backend>, TU: UserType, TR: ReactionType> {
+pub struct UserReactionsQuery<'backend, TB: Backend<'backend>, TU: UserType, TR: ReactionType> {
     pub(crate) user_id: String,
     pub(crate) backend: &'backend TB,
     pub(crate) user_type: PhantomData<TU>,
     pub(crate) reaction_type: PhantomData<TR>,
 }
 
-pub struct UserReaction<'backend, TB: Backend<'backend>, TU: UserType, TR: ReactionType> {
+pub struct UserReactionQuery<'backend, TB: Backend<'backend>, TU: UserType, TR: ReactionType> {
     pub(crate) user_id: String,
     pub(crate) reaction: TR,
     pub(crate) backend: &'backend TB,
     pub(crate) user_type: PhantomData<TU>,
 }
 
-pub struct ItemReactions<'backend, TB: Backend<'backend>, TI: ItemType, TR: ReactionType> {
+pub struct ItemReactionsQuery<'backend, TB: Backend<'backend>, TI: ItemType, TR: ReactionType> {
     pub(crate) item_id: String,
     pub(crate) backend: &'backend TB,
     pub(crate) item_type: PhantomData<TI>,
     pub(crate) reaction_type: PhantomData<TR>,
 }
 
-pub struct ItemReaction<'backend, TB: Backend<'backend>, TI: ItemType, TR: ReactionType> {
+pub struct ItemReactionQuery<'backend, TB: Backend<'backend>, TI: ItemType, TR: ReactionType> {
     pub(crate) item_id: String,
     pub(crate) reaction: TR,
     pub(crate) backend: &'backend TB,
     pub(crate) item_type: PhantomData<TI>,
 }
 
-pub struct UserItemReactions<
+pub struct UserItemReactionsQuery<
     'backend,
     TB: Backend<'backend>,
     TU: UserType,
@@ -59,7 +59,7 @@ pub struct UserItemReactions<
     pub(crate) reaction_type: PhantomData<TR>,
 }
 
-pub struct UserItemReaction<
+pub struct UserItemReactionQuery<
     'backend,
     TB: Backend<'backend>,
     TU: UserType,
@@ -74,7 +74,20 @@ pub struct UserItemReaction<
     pub(crate) item_type: PhantomData<TI>,
 }
 
-impl<'backend, TB: Backend<'backend>, TU, TR> UserReactions<'backend, TB, TU, TR>
+impl<'backend, TB: Backend<'backend>, TR> ReactionsQuery<'backend, TB, TR>
+where
+    TR: ReactionType,
+{
+    fn get(&self, id: impl Into<String>) -> ReactionQuery<'backend, TB, TR> {
+        ReactionQuery {
+            reaction_id: id.into(),
+            backend: self.backend,
+            reaction_type: PhantomData,
+        }
+    }
+}
+
+impl<'backend, TB: Backend<'backend>, TU, TR> UserReactionsQuery<'backend, TB, TU, TR>
 where
     TU: UserType,
     TR: ReactionType,
@@ -84,7 +97,7 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TU, TR, TN> UserReactions<'backend, TB, TU, TR>
+impl<'backend, TB: Backend<'backend>, TU, TR, TN> UserReactionsQuery<'backend, TB, TU, TR>
 where
     TU: UserType,
     TR: ReactionType + Numerical<Item = TN>,
@@ -97,7 +110,7 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TI, TR> ItemReactions<'backend, TB, TI, TR>
+impl<'backend, TB: Backend<'backend>, TI, TR> ItemReactionsQuery<'backend, TB, TI, TR>
 where
     TI: ItemType,
     TR: ReactionType,
@@ -107,7 +120,7 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TI, TR, TN> ItemReactions<'backend, TB, TI, TR>
+impl<'backend, TB: Backend<'backend>, TI, TR, TN> ItemReactionsQuery<'backend, TB, TI, TR>
 where
     TI: ItemType,
     TR: ReactionType + Numerical<Item = TN>,
@@ -120,7 +133,7 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TU, TI, TR> UserItemReactions<'backend, TB, TU, TI, TR>
+impl<'backend, TB: Backend<'backend>, TU, TI, TR> UserItemReactionsQuery<'backend, TB, TU, TI, TR>
 where
     TU: UserType,
     TI: ItemType,
@@ -131,7 +144,8 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TU, TI, TR, TD> UserItemReactions<'backend, TB, TU, TI, TR>
+impl<'backend, TB: Backend<'backend>, TU, TI, TR, TD>
+    UserItemReactionsQuery<'backend, TB, TU, TI, TR>
 where
     TU: UserType,
     TI: ItemType,
@@ -142,7 +156,7 @@ where
     }
 }
 
-impl<'backend, TB: Backend<'backend>, TU, TI, TR> UserItemReactions<'backend, TB, TU, TI, TR>
+impl<'backend, TB: Backend<'backend>, TU, TI, TR> UserItemReactionsQuery<'backend, TB, TU, TI, TR>
 where
     TU: UserType,
     TI: ItemType,
@@ -151,8 +165,8 @@ where
     async fn get_reaction(
         &self,
         reaction: impl Into<TR>,
-    ) -> UserItemReaction<'backend, TB, TU, TI, TR> {
-        UserItemReaction {
+    ) -> UserItemReactionQuery<'backend, TB, TU, TI, TR> {
+        UserItemReactionQuery {
             user_id: self.user_id.to_owned(),
             item_id: self.item_id.to_owned(),
             reaction: reaction.into(),
