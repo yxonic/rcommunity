@@ -16,7 +16,8 @@ fn derive(input: TokenStream) -> TokenStream {
 
     let name = &ast.ident;
     let gen = quote! {
-        impl UserType for #name {}
+        impl ::rcommunity_core::Unique for #name {}
+        impl ::rcommunity_core::UserType for #name {}
     };
     gen.into()
 }

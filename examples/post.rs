@@ -7,14 +7,21 @@ struct UserData {
 }
 
 #[derive(ItemType, WithData)]
-#[with_data(PostData)]
+#[with_data(ItemData)]
+struct Item(String);
+struct ItemData {
+    name: String,
+}
+
+#[derive(ItemType, WithData)]
+#[with_data(Item = PostData)]
 struct Post(String);
 struct PostData {
     content: String,
 }
 
 #[derive(ReactionType, Numerical, Enumerable, Once)]
-#[as_numerical(i32)]
+#[numerical(Item = i32)]
 enum Vote {
     Upvote = 1,
     Downvote = -1,
@@ -30,15 +37,8 @@ struct CommentData {
     content: String,
 }
 
-#[derive(ItemType, WithData)]
-#[with_data(CommentData)]
-struct Item(String);
-struct ItemData {
-    name: String,
-}
-
 #[derive(ReactionType, Numerical, Enumerable, Once)]
-#[as_numerical(i32)]
+#[numerical(Item = i32)]
 enum Rate {
     R5 = 5,
     R4 = 4,
@@ -48,7 +48,7 @@ enum Rate {
 }
 
 #[derive(ReactionType, Numerical, Enumerable, ItemType)]
-#[as_numerical(i32)]
+#[numerical(Item = i32)]
 struct Review(Rate, String);
 
 community!(
