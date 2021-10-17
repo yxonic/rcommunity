@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::{
     backend::Backend,
     error::Error,
-    reaction::{ItemReactionsQuery, UserReactionsQuery},
+    query::{ItemReactionsQuery, UserReactionsQuery},
     ItemType, ReactionType, UserType, WithData,
 };
 
