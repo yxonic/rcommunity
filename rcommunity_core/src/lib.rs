@@ -1,3 +1,6 @@
+#![feature(associated_type_defaults)]
+#![feature(negative_impls)]
+
 pub mod error;
 pub mod traits;
 

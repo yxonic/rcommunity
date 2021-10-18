@@ -1,6 +1,6 @@
-use rcommunity::UserType;
+use rcommunity::{Unique, UserType};
 
-#[derive(UserType)]
+#[derive(Clone, Unique, UserType)]
 struct User(String);
 
 #[test]

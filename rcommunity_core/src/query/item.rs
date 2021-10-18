@@ -7,73 +7,52 @@ use crate::{
     ItemType, ReactionType, UserType, WithData,
 };
 
+use super::UserItemReactionsQuery;
+
+#[derive(Debug)]
 pub struct ItemsQuery<'backend, TB: Backend<'backend>, TI: ItemType> {
-    pub(crate) backend: &'backend TB,
+    backend: &'backend TB,
     pub(crate) item_type: PhantomData<TI>,
 }
 
+#[derive(Debug)]
 pub struct ItemQuery<'backend, TB: Backend<'backend>, TI: ItemType> {
-    pub(crate) item_id: String,
-    pub(crate) backend: &'backend TB,
-    pub(crate) item_type: PhantomData<TI>,
+    pub(crate) item: TI,
+    backend: &'backend TB,
 }
 
-pub struct ItemUsersQuery<'backend, TB: Backend<'backend>, TI: ItemType, TU: UserType> {
-    pub(crate) item_id: String,
-    pub(crate) backend: &'backend TB,
-    pub(crate) item_type: PhantomData<TI>,
-    pub(crate) user_type: PhantomData<TU>,
-}
-
-pub struct ItemUserQuery<'backend, TB: Backend<'backend>, TI: ItemType, TU: UserType> {
-    pub(crate) item_id: String,
-    pub(crate) user_id: String,
-    pub(crate) backend: &'backend TB,
-    pub(crate) item_type: PhantomData<TI>,
-    pub(crate) user_type: PhantomData<TU>,
-}
-
+#[derive(Debug)]
 pub struct UserItemsQuery<'backend, TB: Backend<'backend>, TU: UserType, TI: ItemType> {
-    pub(crate) user_id: String,
-    pub(crate) backend: &'backend TB,
-    pub(crate) user_type: PhantomData<TU>,
+    pub(crate) user: TU,
+    backend: &'backend TB,
     pub(crate) item_type: PhantomData<TI>,
 }
 
+#[derive(Debug)]
 pub struct UserItemQuery<'backend, TB: Backend<'backend>, TU: UserType, TI: ItemType> {
-    pub(crate) user_id: String,
-    pub(crate) item_id: String,
-    pub(crate) backend: &'backend TB,
-    pub(crate) user_type: PhantomData<TU>,
-    pub(crate) item_type: PhantomData<TI>,
-}
-
-impl<'backend, TB: Backend<'backend>, TI, TU> ItemUsersQuery<'backend, TB, TI, TU>
-where
-    TI: ItemType,
-    TU: UserType,
-{
-    fn get(&self, id: impl Into<String>) -> ItemUserQuery<'backend, TB, TI, TU> {
-        ItemUserQuery {
-            user_id: id.into(),
-            item_id: self.item_id.to_owned(),
-            backend: self.backend,
-            user_type: PhantomData,
-            item_type: PhantomData,
-        }
-    }
+    pub(crate) user: TU,
+    pub(crate) item: TI,
+    backend: &'backend TB,
 }
 
 impl<'backend, TB: Backend<'backend>, TI> ItemsQuery<'backend, TB, TI>
 where
     TI: ItemType,
 {
-    fn get(&self, id: impl Into<String>) -> ItemQuery<'backend, TB, TI> {
+    pub fn get(&self, item: impl Into<TI>) -> ItemQuery<'backend, TB, TI> {
         ItemQuery {
-            item_id: id.into(),
+            item: item.into(),
             backend: self.backend,
-            item_type: PhantomData,
         }
+    }
+}
+
+impl<'backend, TB: Backend<'backend>, TI> ItemQuery<'backend, TB, TI>
+where
+    TI: ItemType,
+{
+    pub fn reaction<TR: ReactionType>(&self) -> ItemReactionsQuery<'backend, TB, TI, TR> {
+        ItemReactionsQuery::new(self.backend, self.item.to_owned())
     }
 }
 
@@ -81,8 +60,7 @@ impl<'backend, TB: Backend<'backend>, TI, TD> ItemQuery<'backend, TB, TI>
 where
     TI: ItemType + WithData<Item = TD>,
 {
-    async fn data(&self) -> Result<(TI, TD), Error> {
-        self.backend.query().await;
+    pub async fn data(&self) -> Result<(TI, TD), Error> {
         todo!("query user with data from backend result");
     }
 }
@@ -92,14 +70,29 @@ where
     TU: UserType,
     TI: ItemType,
 {
-    fn get(&self, id: impl Into<String>) -> UserItemQuery<'backend, TB, TU, TI> {
-        UserItemQuery {
-            user_id: self.user_id.to_owned(),
-            item_id: id.into(),
-            backend: self.backend,
-            user_type: PhantomData,
+    pub fn new(backend: &'backend TB, user: impl Into<TU>) -> UserItemsQuery<'backend, TB, TU, TI> {
+        UserItemsQuery {
+            user: user.into(),
+            backend,
             item_type: PhantomData,
         }
+    }
+    pub fn get(&self, item: impl Into<TI>) -> UserItemQuery<'backend, TB, TU, TI> {
+        UserItemQuery {
+            user: self.user.to_owned(),
+            item: item.into(),
+            backend: self.backend,
+        }
+    }
+}
+
+impl<'backend, TB: Backend<'backend>, TU, TI> UserItemQuery<'backend, TB, TU, TI>
+where
+    TU: UserType,
+    TI: ItemType,
+{
+    pub fn reaction<TR: ReactionType>(&self) -> UserItemReactionsQuery<'backend, TB, TU, TI, TR> {
+        UserItemReactionsQuery::new(self.backend, self.user.to_owned(), self.item.to_owned())
     }
 }
 
@@ -108,13 +101,8 @@ where
     TU: UserType,
     TI: ItemType + ReactionType,
 {
-    fn given(self, id: impl Into<String>) -> UserReactionsQuery<'backend, TB, TU, TI> {
-        UserReactionsQuery {
-            user_id: self.user_id,
-            backend: self.backend,
-            user_type: PhantomData,
-            reaction_type: PhantomData,
-        }
+    pub fn given(self) -> UserReactionsQuery<'backend, TB, TU, TI> {
+        UserReactionsQuery::new(self.backend, self.user.to_owned())
     }
 }
 
@@ -123,12 +111,7 @@ where
     TU: UserType + ItemType,
     TI: ItemType + ReactionType,
 {
-    fn received(self, id: impl Into<String>) -> ItemReactionsQuery<'backend, TB, TU, TI> {
-        ItemReactionsQuery {
-            item_id: self.user_id,
-            backend: self.backend,
-            item_type: PhantomData,
-            reaction_type: PhantomData,
-        }
+    pub fn received(self) -> ItemReactionsQuery<'backend, TB, TU, TI> {
+        ItemReactionsQuery::new(self.backend, self.user.to_owned())
     }
 }
