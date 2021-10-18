@@ -329,7 +329,7 @@ dependencies = [
 
 [[package]]
 name = "rcommunity_core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "thiserror",
@@ -338,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "rcommunity_macros"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "proc-macro2",
  "quote",
