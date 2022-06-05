@@ -1,6 +1,9 @@
+// clippy settings
+#![warn(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+// toggle unstable features
+#![allow(incomplete_features)]
 #![feature(specialization)]
-#![feature(associated_type_defaults)]
-#![feature(negative_impls)]
 
 pub mod error;
 pub mod traits;

@@ -21,10 +21,11 @@ impl<T: ReactionType> store::Storable for T {
     }
     default async fn store_unique_index(
         &self,
-        txn: &mut impl Transaction,
-        user: &impl UserType,
-        item: &impl ItemType,
+        _txn: &mut impl Transaction,
+        _user: &impl UserType,
+        _item: &impl ItemType,
     ) -> Result<()> {
+        // by default do nothing
         Ok(())
     }
 }
