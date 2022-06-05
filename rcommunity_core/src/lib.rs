@@ -1,3 +1,4 @@
+#![feature(specialization)]
 #![feature(associated_type_defaults)]
 #![feature(negative_impls)]
 
