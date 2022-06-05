@@ -173,8 +173,8 @@ where
             reaction_type: PhantomData,
         }
     }
-    pub fn create(&self, reaction: TR) -> ReactionBuilder<'backend, '_, TB, TU, TI, TR> {
-        ReactionBuilder::new(self.backend, &self.user, &self.item, reaction)
+    pub fn create(&self, reaction: impl Into<TR>) -> ReactionBuilder<'backend, '_, TB, TU, TI, TR> {
+        ReactionBuilder::new(self.backend, &self.user, &self.item, reaction.into())
     }
 }
 

@@ -9,6 +9,14 @@ impl Backend<'_> for MockBackend {}
 
 #[derive(Debug, Clone)]
 struct User(String);
+impl<T> From<T> for User
+where
+    T: Into<String>,
+{
+    fn from(id: T) -> Self {
+        User(id.into())
+    }
+}
 impl Unique for User {}
 impl UserType for User {}
 
@@ -19,6 +27,14 @@ impl ItemType for Post {}
 
 #[derive(Debug, Clone)]
 struct Comment(String);
+impl<T> From<T> for Comment
+where
+    T: Into<String>,
+{
+    fn from(id: T) -> Self {
+        Comment(id.into())
+    }
+}
 impl Unique for Comment {}
 impl ItemType for Comment {}
 impl ReactionType for Comment {}
@@ -30,27 +46,14 @@ impl WithData for Comment {
 #[tokio::test]
 async fn test_query() -> Result<(), Error> {
     let root: UsersQuery<MockBackend, User> = UsersQuery::new(&MockBackend);
-    println!(
-        "{:?}",
-        root.get(User("1000".into())).item::<Comment>().given()
-    );
-    assert!(
-        root.get(User("1000".into()))
-            .item::<Comment>()
-            .given()
-            .count()
-            .await?
-            == 0
-    );
+    println!("{:?}", root.get("1000").item::<Comment>().given());
+    assert!(root.get("1000").item::<Comment>().given().count().await? == 0);
     let r = root
-        .get(User("1000".into()))
+        .get("1000")
         .item::<Comment>()
-        .get(Comment("2000".into()))
+        .get("2000")
         .reaction::<Comment>();
-    r.create(Comment("2001".into()))
-        .with_data("hello")
-        .push()
-        .await;
+    r.create("2001").with_data("hello").push().await;
 
     Ok(())
 }
