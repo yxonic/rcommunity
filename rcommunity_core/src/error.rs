@@ -7,3 +7,5 @@ pub enum Error {
     #[error("Unknown error: {0}.")]
     UnknownError(String),
 }
+
+pub type Result<T> = core::result::Result<T, Error>;

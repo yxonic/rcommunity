@@ -10,3 +10,7 @@ pub mod backend;
 
 // re-export all traits
 pub use traits::*;
+
+pub mod client;
+pub mod markers;
+pub mod store;
