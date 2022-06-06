@@ -84,3 +84,51 @@ impl Transaction for MemoryTransaction {
         unimplemented!();
     }
 }
+
+impl Drop for MemoryTransaction {
+    fn drop(&mut self) {
+        // ensure transaction lock is released
+        self.release_txn_lock();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::store::{Store, Transaction};
+
+    use super::MemoryStore;
+
+    #[tokio::test]
+    async fn test_memory_store() {
+        let mut store = MemoryStore::default();
+        {
+            let mut txn = store.txn_begin().await.unwrap();
+            assert!(txn.get("key".into()).await.unwrap().is_none());
+            txn.put("key".into(), "value".into()).await.unwrap();
+            assert_eq!(
+                txn.get("key".into()).await.unwrap().unwrap(),
+                String::from("value")
+            );
+        }
+        {
+            let mut txn = store.txn_begin().await.unwrap();
+            assert_eq!(
+                txn.get_for_update("key".into()).await.unwrap().unwrap(),
+                String::from("value")
+            );
+            txn.put("key".into(), "".into()).await.unwrap();
+            assert_eq!(
+                txn.get("key".into()).await.unwrap().unwrap(),
+                String::from("")
+            );
+            txn.commit().await.unwrap();
+        }
+        {
+            let txn = store.txn_begin().await.unwrap();
+            assert_eq!(
+                txn.get("key".into()).await.unwrap().unwrap(),
+                String::from("")
+            );
+        }
+    }
+}
