@@ -14,7 +14,7 @@ pub struct UserItemUnboundedReactionClient<
     TI: ItemType,
     TR: ReactionType,
 > {
-    store: &'store TS,
+    store: &'store mut TS,
     user: TU,
     item: TI,
     reaction_type: PhantomData<TR>,
@@ -66,9 +66,9 @@ mod test {
 
     #[tokio::test]
     async fn test_reaction() {
-        let store = MemoryStore::default();
+        let mut store = MemoryStore::default();
         let mut client = UserItemUnboundedReactionClient {
-            store: &store,
+            store: &mut store,
             user: User("1000".into()),
             item: Item("2000".into()),
             reaction_type: PhantomData::<Vote>,
@@ -76,7 +76,7 @@ mod test {
         client.push(Vote::Upvote).await.unwrap();
 
         let mut client = UserItemUnboundedReactionClient {
-            store: &store,
+            store: &mut store,
             user: User("1000".into()),
             item: Item("2000".into()),
             reaction_type: PhantomData::<Comment>,

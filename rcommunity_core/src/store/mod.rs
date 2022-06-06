@@ -7,7 +7,7 @@ use crate::error::Result;
 #[async_trait]
 pub trait Store {
     type Trans: Transaction;
-    async fn txn_begin(&self) -> Result<Self::Trans>;
+    async fn txn_begin(&mut self) -> Result<Self::Trans>;
 }
 
 #[async_trait]
