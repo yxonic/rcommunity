@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    error::Error, query::reaction, Enumerable, ItemType, Multiple, Numerical, Once, ReactionType,
-    UserType, WithData,
+    error::Error, Enumerable, ItemType, Multiple, Numerical, Once, ReactionType, UserType, WithData,
 };
 
 #[async_trait]
