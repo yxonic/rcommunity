@@ -24,7 +24,7 @@ impl<'store, TS: Store, TU: UserType, TI: ItemType, TR: ReactionType>
     UserItemUnboundedReactionClient<'store, TS, TU, TI, TR>
 {
     async fn push(&mut self, reaction: impl Into<TR>) -> Result<()> {
-        let mut txn = self.store.txn_begin().await?;
+        let mut txn = self.store.begin_txn().await?;
         let r = reaction.into();
 
         r.store_reaction(&mut txn, &self.user, &self.item).await?;

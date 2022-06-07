@@ -1,3 +1,22 @@
+//! An in-memory [`Store`] implementation. Useful for testing.
+//!
+//! # Example Usage
+//! ```rust
+//! use rcommunity_core::store::memory::MemoryStore;
+//! use rcommunity_core::store::{Store, Transaction};
+//!
+//! tokio_test::block_on(async {
+//!     let mut store = MemoryStore::default();
+//!     let mut txn = store.begin_txn().await.unwrap();
+//!     assert!(txn.get("key".into()).await.unwrap().is_none());
+//!     txn.put("key".into(), "value".into()).await.unwrap();
+//!     assert_eq!(
+//!         txn.get("key".into()).await.unwrap().unwrap(),
+//!         String::from("value")
+//!     );
+//! })
+//! ```
+
 use async_trait::async_trait;
 use parking_lot::{Condvar, Mutex, MutexGuard};
 use std::{collections::BTreeMap, sync::Arc};
@@ -8,6 +27,12 @@ use super::{Store, Transaction};
 
 type StringMap = BTreeMap<String, String>;
 
+/// Implementation of an in-memory [`Store`].
+///
+/// Internally, each operation of `MemoryStore` first obtains a transaction lock, then locks the
+/// mutex protecting the underlying store. The transaction lock is implemented as a [`Condvar`],
+/// checking whether it is currently in the same transaction (or no transaction at all) before
+/// entering.
 #[derive(Debug, Default)]
 pub struct MemoryStore {
     store: Arc<Mutex<StringMap>>,
@@ -17,8 +42,8 @@ pub struct MemoryStore {
 
 #[async_trait]
 impl Store for MemoryStore {
-    type Trans = MemoryTransaction;
-    async fn txn_begin(&mut self) -> Result<MemoryTransaction> {
+    type Transaction = MemoryTransaction;
+    async fn begin_txn(&mut self) -> Result<MemoryTransaction> {
         self.max_txn_id += 1;
         Ok(MemoryTransaction {
             store: self.store.clone(),
@@ -28,6 +53,7 @@ impl Store for MemoryStore {
     }
 }
 
+/// Transaction type for [`MemoryStore`].
 pub struct MemoryTransaction {
     store: Arc<Mutex<StringMap>>,
     cur_txn_id: Arc<(Mutex<usize>, Condvar)>,
@@ -80,14 +106,11 @@ impl Transaction for MemoryTransaction {
         self.release_txn_lock();
         Ok(())
     }
-    async fn rollback(&mut self) -> Result<()> {
-        unimplemented!();
-    }
 }
 
 impl Drop for MemoryTransaction {
+    /// Ensure transaction lock is released before dropping.
     fn drop(&mut self) {
-        // ensure transaction lock is released
         self.release_txn_lock();
     }
 }
@@ -102,7 +125,7 @@ mod test {
     async fn test_memory_store() {
         let mut store = MemoryStore::default();
         {
-            let mut txn = store.txn_begin().await.unwrap();
+            let mut txn = store.begin_txn().await.unwrap();
             assert!(txn.get("key".into()).await.unwrap().is_none());
             txn.put("key".into(), "value".into()).await.unwrap();
             assert_eq!(
@@ -111,7 +134,7 @@ mod test {
             );
         }
         {
-            let mut txn = store.txn_begin().await.unwrap();
+            let mut txn = store.begin_txn().await.unwrap();
             assert_eq!(
                 txn.get_for_update("key".into()).await.unwrap().unwrap(),
                 String::from("value")
@@ -124,7 +147,7 @@ mod test {
             txn.commit().await.unwrap();
         }
         {
-            let txn = store.txn_begin().await.unwrap();
+            let txn = store.begin_txn().await.unwrap();
             assert_eq!(
                 txn.get("key".into()).await.unwrap().unwrap(),
                 String::from("")

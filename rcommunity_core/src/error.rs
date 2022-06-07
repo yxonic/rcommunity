@@ -1,3 +1,5 @@
+//! Defines error and result types used by this crate.
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
