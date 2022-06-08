@@ -1,11 +1,11 @@
 [package]
 name = "rcommunity"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Yu Yin <yxonic@gmail.com>"]
 description = "Subsystem for building a community on top of existing business"
 license = "MIT"
 edition = "2021"
 
 [dependencies]
-rcommunity_core = { path = "../rcommunity_core", version = "^0.0.2" }
-rcommunity_macros = { path = "../rcommunity_macros", version = "0.0.1" }
+rcommunity_core = { path = "../rcommunity_core", version = "^0.0.3" }
+rcommunity_macros = { path = "../rcommunity_macros", version = "^0.0.2" }
