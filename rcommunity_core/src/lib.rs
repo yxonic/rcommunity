@@ -13,6 +13,7 @@ pub mod client;
 pub mod error;
 pub mod markers;
 pub mod store;
+pub mod utils;
 
 // Deprecated: remove after refactor.
 pub mod backend;
