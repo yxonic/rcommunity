@@ -2,7 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{
     error::Result,
-    markers::{ItemType, ReactionType, Storable, UserType},
+    markers::hooks::{BeforeStore, OnStoreReaction, OnStoreUniqueIndex},
+    markers::{ItemType, ReactionType, UserType},
     store::{Store, Transaction},
 };
 
@@ -43,6 +44,8 @@ impl<'store, TS: Store, TU: UserType, TI: ItemType, TR: ReactionType>
         let mut txn = self.store.begin_txn().await?;
         let r = reaction.into();
         let rid = uuid::Uuid::new_v4().to_string(); // TODO: keep Uuid type
+
+        r.before_store(&mut txn, &self.user, &self.item).await?;
         r.store_reaction(&mut txn, &rid, &self.user, &self.item)
             .await?;
         r.store_unique_index(&mut txn, &rid, &self.user, &self.item)
