@@ -1,9 +1,4 @@
-use rcommunity::{Unique, UserType};
+use rcommunity::{UserType, ID};
 
-#[derive(Clone, Unique, UserType)]
+#[derive(Clone, ID, UserType)]
 struct User(String);
-
-#[test]
-fn test() {
-    assert!(true);
-}

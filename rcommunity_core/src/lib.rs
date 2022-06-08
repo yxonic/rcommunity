@@ -15,9 +15,5 @@ pub mod markers;
 pub mod store;
 pub mod utils;
 
-// Deprecated: remove after refactor.
-pub mod backend;
-pub mod query;
-pub mod traits;
 // Re-export all traits.
-pub use traits::*;
+pub use markers::*;

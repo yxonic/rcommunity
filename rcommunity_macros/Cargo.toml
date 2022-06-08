@@ -4,13 +4,12 @@ version = "0.0.1"
 authors = ["Yu Yin <yxonic@gmail.com>"]
 description = "Macros for `rcommunity`"
 license = "MIT"
-edition = "2018"
+edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 proc_macro = true
 
 [dependencies]
-syn = "1"
-quote = "1"
-proc-macro2 = "1"
+proc-macro2 = "1.0.39"
+quote = "1.0.18"
+syn = "1.0.96"
