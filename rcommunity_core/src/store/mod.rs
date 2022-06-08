@@ -17,13 +17,15 @@ pub trait Store {
 
 /// Abstraction of all supported operations in a transaction corresponding to a [`Store`].
 #[async_trait]
-pub trait Transaction: Send {
+pub trait Transaction: Send + Sync {
     /// Get the value of a key from store.
     async fn get(&self, key: String) -> Result<Option<String>>;
     /// Get the value of a key from store, while blocking reads/writes from other transactions. Useful for concurrent global updates.
     async fn get_for_update(&mut self, key: String) -> Result<Option<String>>;
     /// Put a key-value pair in store.
     async fn put(&mut self, key: String, value: String) -> Result<()>;
+    /// Deletes the given key and its value from store.
+    async fn delete(&mut self, key: String) -> Result<()>;
     /// Commit this transaction.
     async fn commit(&mut self) -> Result<()>;
     /// Rollback this transaction. Implementation of this method is not required.

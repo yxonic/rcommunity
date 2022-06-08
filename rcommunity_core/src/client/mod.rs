@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{
     error::Result,
-    markers::hooks::{BeforeStore, OnStoreReaction, OnStoreUniqueIndex},
     markers::{ItemType, ReactionType, UserType},
+    reactor::Reactor,
     store::{Store, Transaction},
 };
 
@@ -41,18 +41,11 @@ impl<'store, TS: Store, TU: UserType, TI: ItemType, TR: ReactionType>
     /// # Errors
     /// Will return error when internal store failed.
     pub async fn react(&mut self, reaction: impl Into<TR>) -> Result<Reaction<TU, TI, TR>> {
-        let mut txn = self.store.begin_txn().await?;
         let r = reaction.into();
+        let mut txn = self.store.begin_txn().await?;
         let rid = uuid::Uuid::new_v4().to_string(); // TODO: keep Uuid type
-
-        r.before_store(&mut txn, &self.user, &self.item).await?;
-        r.store_reaction(&mut txn, &rid, &self.user, &self.item)
-            .await?;
-        r.store_unique_index(&mut txn, &rid, &self.user, &self.item)
-            .await?;
-
+        r.react(&mut txn, &rid, &self.user, &self.item).await?;
         txn.commit().await?;
-
         Ok(Reaction {
             id: rid,
             user: self.user.clone(),
@@ -67,7 +60,7 @@ mod test {
     use std::marker::PhantomData;
 
     use crate::{
-        markers::{ItemType, ReactionType, Serializable, UserType, ID},
+        markers::{ItemType, Once, ReactionType, Serializable, UserType, ID},
         store::{memory::MemoryStore, Store, Transaction},
     };
 
@@ -106,6 +99,7 @@ mod test {
         }
     }
     impl ReactionType for Vote {}
+    impl Once for Vote {}
 
     #[derive(Clone, Debug)]
     struct Comment(String);
@@ -144,9 +138,14 @@ mod test {
             .unwrap();
         assert!(value.is_none());
 
-        let vote = client.react(Vote::Downvote).await.unwrap();
-        let value = txn
+        let vote2 = client.react(Vote::Downvote).await.unwrap();
+        assert!(txn
             .get(format!("Vote:User:1000:Item:2000:{}", vote.id))
+            .await
+            .unwrap()
+            .is_none());
+        let value = txn
+            .get(format!("Vote:User:1000:Item:2000:{}", vote2.id))
             .await
             .unwrap()
             .unwrap();
