@@ -12,6 +12,7 @@
 pub mod client;
 pub mod error;
 pub mod markers;
+pub mod ops;
 pub mod store;
 pub mod utils;
 

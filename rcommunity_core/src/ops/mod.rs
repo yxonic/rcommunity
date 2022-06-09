@@ -2,55 +2,8 @@ use async_trait::async_trait;
 
 use crate::{error::Result, store::Transaction, utils::typename};
 
-use super::{Enumerable, Once, ID};
-use super::{ItemType, ReactionType, UserType};
-
-#[async_trait]
-pub trait Reactor {
-    async fn react(
-        &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()>;
-    async fn dereact(
-        &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()>;
-}
-
-#[async_trait]
-impl<T: ReactionType> Reactor for T {
-    async fn react(
-        &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()> {
-        self.before_store(txn, user, item).await?;
-        self.store_reaction(txn, rid, user, item).await?;
-        self.store_unique_index(txn, rid, user, item).await?;
-        self.store_enum_index(txn, rid, user, item).await?;
-        Ok(())
-    }
-    async fn dereact(
-        &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()> {
-        self.discard_reaction(txn, rid, user, item).await?;
-        self.discard_unique_index(txn, rid, user, item).await?;
-        self.discard_enum_index(txn, rid, user, item).await?;
-        Ok(())
-    }
-}
+use crate::markers::{Enumerable, Once, ID};
+use crate::markers::{ItemType, ReactionType, UserType};
 
 #[async_trait]
 pub trait BeforeStore {
@@ -201,6 +154,53 @@ impl<T: ReactionType> EnumIndex for T {
         _item: &impl ItemType,
     ) -> Result<()> {
         // by default do nothing
+        Ok(())
+    }
+}
+
+#[async_trait]
+pub trait Reactor {
+    async fn react(
+        &self,
+        txn: &mut impl Transaction,
+        rid: &str,
+        user: &impl UserType,
+        item: &impl ItemType,
+    ) -> Result<()>;
+    async fn dereact(
+        &self,
+        txn: &mut impl Transaction,
+        rid: &str,
+        user: &impl UserType,
+        item: &impl ItemType,
+    ) -> Result<()>;
+}
+
+#[async_trait]
+impl<T: ReactionType> Reactor for T {
+    async fn react(
+        &self,
+        txn: &mut impl Transaction,
+        rid: &str,
+        user: &impl UserType,
+        item: &impl ItemType,
+    ) -> Result<()> {
+        self.before_store(txn, user, item).await?;
+        self.store_reaction(txn, rid, user, item).await?;
+        self.store_unique_index(txn, rid, user, item).await?;
+        self.store_enum_index(txn, rid, user, item).await?;
+        Ok(())
+    }
+    async fn dereact(
+        &self,
+        txn: &mut impl Transaction,
+        rid: &str,
+        user: &impl UserType,
+        item: &impl ItemType,
+    ) -> Result<()> {
+        self.discard_reaction(txn, rid, user, item).await?;
+        self.discard_unique_index(txn, rid, user, item).await?;
+        self.discard_enum_index(txn, rid, user, item).await?;
         Ok(())
     }
 }
