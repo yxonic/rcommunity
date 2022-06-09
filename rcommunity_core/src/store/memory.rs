@@ -102,6 +102,14 @@ impl Transaction for MemoryTransaction {
         }
         Ok(())
     }
+    async fn delete(&mut self, key: String) -> Result<()> {
+        let (cur_txn_id, cvar) = self.txn_lock();
+        self.store.lock().remove(&key);
+        if *cur_txn_id == 0 {
+            cvar.notify_one();
+        }
+        Ok(())
+    }
     async fn commit(&mut self) -> Result<()> {
         self.release_txn_lock();
         Ok(())
@@ -147,11 +155,13 @@ mod test {
             txn.commit().await.unwrap();
         }
         {
-            let txn = store.begin_txn().await.unwrap();
+            let mut txn = store.begin_txn().await.unwrap();
             assert_eq!(
                 txn.get("key".into()).await.unwrap().unwrap(),
                 String::from("")
             );
+            txn.delete("key".into()).await.unwrap();
+            assert!(txn.get("key".into()).await.unwrap().is_none());
         }
     }
 }

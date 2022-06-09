@@ -2,7 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{
     error::Result,
-    markers::{ItemType, ReactionType, Storable, UserType},
+    markers::{ItemType, ReactionType, UserType},
+    reactor::Reactor,
     store::{Store, Transaction},
 };
 
@@ -40,16 +41,11 @@ impl<'store, TS: Store, TU: UserType, TI: ItemType, TR: ReactionType>
     /// # Errors
     /// Will return error when internal store failed.
     pub async fn react(&mut self, reaction: impl Into<TR>) -> Result<Reaction<TU, TI, TR>> {
+        let r: TR = reaction.into();
         let mut txn = self.store.begin_txn().await?;
-        let r = reaction.into();
         let rid = uuid::Uuid::new_v4().to_string(); // TODO: keep Uuid type
-        r.store_reaction(&mut txn, &rid, &self.user, &self.item)
-            .await?;
-        r.store_unique_index(&mut txn, &rid, &self.user, &self.item)
-            .await?;
-
+        r.react(&mut txn, &rid, &self.user, &self.item).await?;
         txn.commit().await?;
-
         Ok(Reaction {
             id: rid,
             user: self.user.clone(),
@@ -64,7 +60,7 @@ mod test {
     use std::marker::PhantomData;
 
     use crate::{
-        markers::{ItemType, ReactionType, Serializable, UserType, ID},
+        markers::{ItemType, Once, ReactionType, Serializable, UserType, ID},
         store::{memory::MemoryStore, Store, Transaction},
     };
 
@@ -103,6 +99,7 @@ mod test {
         }
     }
     impl ReactionType for Vote {}
+    impl Once for Vote {}
 
     #[derive(Clone, Debug)]
     struct Comment(String);
@@ -126,28 +123,27 @@ mod test {
             reaction_type: PhantomData::<Vote>,
         };
         let vote = client.react(Vote::Upvote).await.unwrap();
-
         // vote tests
         let value = txn
-            .get(format!("Vote:User:1000:Item:2000:{}", vote.id))
+            .get("Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(&value, "Upvote");
+        assert_eq!(value, format!("Upvote_{}", vote.id));
 
         let value = txn
-            .get("Vote:User:1000:Item:2000:Upvote".into())
+            .get("Vote_User:1000_Item:2000_Upvote".into())
             .await
             .unwrap();
         assert!(value.is_none());
 
-        let vote = client.react(Vote::Downvote).await.unwrap();
+        client.react(Vote::Downvote).await.unwrap();
         let value = txn
-            .get(format!("Vote:User:1000:Item:2000:{}", vote.id))
+            .get("Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(&value, "Downvote");
+        assert!(value.starts_with("Downvote"));
 
         // comment tests
         let mut client = UserItemUnboundedReactionClient {
@@ -159,13 +155,13 @@ mod test {
         let comment = client.react(Comment("3000".into())).await.unwrap();
 
         let value = txn
-            .get(format!("Comment:User:1000:Item:2000:{}", comment.id))
+            .get(format!("Comment_User:1000_Item:2000_{}", comment.id))
             .await
             .unwrap()
             .unwrap();
         assert_eq!(&value, "Comment:3000");
         let value = txn
-            .get("Comment:User:1000:Item:2000:Comment:3000".into())
+            .get("Comment_User:1000_Item:2000_Comment:3000".into())
             .await
             .unwrap()
             .unwrap();
