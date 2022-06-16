@@ -1,3 +1,5 @@
+//! Utility functions for rcommunity.
+
 use std::any::type_name;
 
 #[must_use]

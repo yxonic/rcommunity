@@ -1,9 +1,11 @@
+//! Type-safe API for accessing community store and operations.
+
 use std::marker::PhantomData;
 
 use crate::{
     error::Result,
     markers::{ItemType, ReactionType, UserType},
-    reactor::Reactor,
+    ops::Reactor,
     store::{Store, Transaction},
 };
 
