@@ -1,3 +1,5 @@
+//! Traits for supporting all the internal operations.
+
 use async_trait::async_trait;
 
 use crate::{error::Result, store::Transaction};
