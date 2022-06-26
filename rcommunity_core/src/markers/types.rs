@@ -1,4 +1,4 @@
-//! Traits to mark struct as basic community types.
+//! Traits to mark data as basic community types.
 
 use crate::utils::typename;
 
