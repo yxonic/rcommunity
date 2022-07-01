@@ -50,7 +50,10 @@ impl<T: ReactionType> Reactor for T {
         txn: &mut impl Transaction,
         rid: &str,
     ) -> Result<()> {
-        let (user, item, r) = T::get_reaction_by_id::<TU, TI>(txn, rid).await?;
+        let r = T::get_reaction_by_id::<TU, TI>(txn, rid).await?;
+        let user = r.user;
+        let item = r.item;
+        let r = r.reaction;
         r.discard_enum_index(txn, rid, &user, &item).await?;
         r.discard_unique_index(txn, rid, &user, &item).await?;
         r.discard_reaction(txn, rid, &user, &item).await?;

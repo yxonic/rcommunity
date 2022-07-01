@@ -6,9 +6,20 @@ use crate::{error::Result, store::Transaction, utils::typename};
 use crate::markers::Once;
 use crate::markers::{ItemType, ReactionType, UserType};
 
+pub struct Reaction<TU, TI, TR>
+where
+    TU: UserType,
+    TI: ItemType,
+    TR: ReactionType,
+{
+    pub user: TU,
+    pub item: TI,
+    pub reaction: TR,
+}
+
 /// Ability to manage and query reaction basic information.
 #[async_trait]
-pub trait ReactionInfo: Sized {
+pub trait ReactionInfo: Sized + ReactionType {
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -26,7 +37,7 @@ pub trait ReactionInfo: Sized {
     async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<(TU, TI, Self)>;
+    ) -> Result<Reaction<TU, TI, Self>>;
 }
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
@@ -83,7 +94,7 @@ impl<T: ReactionType> ReactionInfo for T {
     default async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<(TU, TI, Self)> {
+    ) -> Result<Reaction<TU, TI, T>> {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
         let value = txn.get(key).await?;
@@ -91,8 +102,12 @@ impl<T: ReactionType> ReactionInfo for T {
             let fields: Vec<&str> = v.split('_').collect();
             let user = TU::deserialize(fields[0]);
             let item = TI::deserialize(fields[1]);
-            let r = T::deserialize(fields[2]);
-            return Ok((user, item, r));
+            let reaction = T::deserialize(fields[2]);
+            return Ok(Reaction {
+                user,
+                item,
+                reaction,
+            });
         }
         Err(Error::UnknownError("TODO: change to not found".into()))
     }
