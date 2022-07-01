@@ -19,6 +19,9 @@ fn derive_id(input: TokenStream) -> TokenStream {
             fn id(&self) -> &str {
                 &self.0
             }
+            fn from(id: &str) -> Self {
+                #name(id.into())
+            }
         }
     };
     gen

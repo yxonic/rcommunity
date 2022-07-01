@@ -9,18 +9,6 @@ use crate::{
     store::{Store, Transaction},
 };
 
-pub struct Reaction<TU, TI, TR>
-where
-    TU: UserType,
-    TI: ItemType,
-    TR: ReactionType,
-{
-    pub id: String,
-    pub user: TU,
-    pub item: TI,
-    pub reaction: TR,
-}
-
 #[derive(Debug)]
 pub struct UserItemUnboundedReactionClient<
     'store,
@@ -42,18 +30,13 @@ impl<'store, TS: Store, TU: UserType, TI: ItemType, TR: ReactionType>
     ///
     /// # Errors
     /// Will return error when internal store failed.
-    pub async fn react(&mut self, reaction: impl Into<TR>) -> Result<Reaction<TU, TI, TR>> {
+    pub async fn react(&mut self, reaction: impl Into<TR>) -> Result<String> {
         let r: TR = reaction.into();
         let mut txn = self.store.begin_txn().await?;
         let rid = uuid::Uuid::new_v4().to_string(); // TODO: keep Uuid type
         r.react(&mut txn, &rid, &self.user, &self.item).await?;
         txn.commit().await?;
-        Ok(Reaction {
-            id: rid,
-            user: self.user.clone(),
-            item: self.item.clone(),
-            reaction: r,
-        })
+        Ok(rid)
     }
 }
 
@@ -75,6 +58,9 @@ mod test {
         fn id(&self) -> &str {
             &self.0
         }
+        fn from(id: &str) -> Self {
+            User(id.into())
+        }
     }
     impl UserType for User {}
     #[derive(Clone, Debug)]
@@ -82,6 +68,9 @@ mod test {
     impl ID for Item {
         fn id(&self) -> &str {
             &self.0
+        }
+        fn from(id: &str) -> Self {
+            Item(id.into())
         }
     }
     impl ItemType for Item {}
@@ -99,6 +88,13 @@ mod test {
             }
             .into()
         }
+        fn deserialize(data: &str) -> Self {
+            if data.starts_with('U') {
+                Vote::Upvote
+            } else {
+                Vote::Downvote
+            }
+        }
     }
     impl ReactionType for Vote {}
     impl Once for Vote {}
@@ -110,6 +106,9 @@ mod test {
     impl ID for Comment {
         fn id(&self) -> &str {
             &self.0
+        }
+        fn from(id: &str) -> Self {
+            Comment(id.into())
         }
     }
 
@@ -124,24 +123,24 @@ mod test {
             item: Item("2000".into()),
             reaction_type: PhantomData::<Vote>,
         };
-        let vote = client.react(Vote::Upvote).await.unwrap();
+        let rid = client.react(Vote::Upvote).await.unwrap();
         // vote tests
         let value = txn
-            .get("Vote_User:1000_Item:2000".into())
+            .get("ui_Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(value, format!("Upvote_{}", vote.id));
+        assert_eq!(value, format!("Upvote_{}", rid));
 
         let value = txn
-            .get("Vote_User:1000_Item:2000_Upvote".into())
+            .get("ui_Vote_User:1000_Item:2000_Upvote".into())
             .await
             .unwrap();
         assert!(value.is_none());
 
         client.react(Vote::Downvote).await.unwrap();
         let value = txn
-            .get("Vote_User:1000_Item:2000".into())
+            .get("ui_Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
@@ -154,19 +153,19 @@ mod test {
             item: Item("2000".into()),
             reaction_type: PhantomData::<Comment>,
         };
-        let comment = client.react(Comment("3000".into())).await.unwrap();
+        let rid = client.react(Comment("3000".into())).await.unwrap();
 
         let value = txn
-            .get(format!("Comment_User:1000_Item:2000_{}", comment.id))
+            .get(format!("ui_Comment_User:1000_Item:2000_{}", rid))
             .await
             .unwrap()
             .unwrap();
         assert_eq!(&value, "Comment:3000");
         let value = txn
-            .get("Comment_User:1000_Item:2000_Comment:3000".into())
+            .get("u_Comment_User:1000_Item:2000_Comment:3000".into())
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(value, comment.id);
+        assert_eq!(value, rid);
     }
 }

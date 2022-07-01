@@ -20,7 +20,8 @@ pub trait Store {
 pub trait Transaction: Send + Sync {
     /// Get the value of a key from store.
     async fn get(&self, key: String) -> Result<Option<String>>;
-    /// Get the value of a key from store, while blocking reads/writes from other transactions. Useful for concurrent global updates.
+    /// Get the value of a key from store, while blocking reads/writes from other transactions.
+    /// Useful for concurrent global updates.
     async fn get_for_update(&mut self, key: String) -> Result<Option<String>>;
     /// Put a key-value pair in store.
     async fn put(&mut self, key: String, value: String) -> Result<()>;

@@ -8,21 +8,21 @@ use crate::ops::Reactor;
 
 #[async_trait]
 pub trait BeforeStore {
-    async fn before_store(
+    async fn before_store<TU: UserType, TI: ItemType>(
         &self,
         txn: &mut impl Transaction,
-        user: &impl UserType,
-        item: &impl ItemType,
+        user: &TU,
+        item: &TI,
     ) -> Result<()>;
 }
 
 #[async_trait]
 impl<T: ReactionType> BeforeStore for T {
-    default async fn before_store(
+    default async fn before_store<TU: UserType, TI: ItemType>(
         &self,
         _txn: &mut impl Transaction,
-        _user: &impl UserType,
-        _item: &impl ItemType,
+        _user: &TU,
+        _item: &TI,
     ) -> Result<()> {
         // by default do nothing
         Ok(())
@@ -31,17 +31,17 @@ impl<T: ReactionType> BeforeStore for T {
 
 #[async_trait]
 impl<T: ReactionType + Once> BeforeStore for T {
-    async fn before_store(
+    async fn before_store<TU: UserType, TI: ItemType>(
         &self,
         txn: &mut impl Transaction,
-        user: &impl UserType,
-        item: &impl ItemType,
+        user: &TU,
+        item: &TI,
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
         let rid = txn.get(key).await?;
         if let Some(rid) = rid {
-            self.dereact(txn, &rid, user, item).await?;
+            T::dereact::<TU, TI>(txn, &rid).await?;
         }
         Ok(())
     }
