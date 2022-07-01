@@ -8,7 +8,7 @@ use crate::markers::{ItemType, ReactionType, UserType};
 
 /// Ability to manage and query reaction basic information.
 #[async_trait]
-pub trait ReactionInfo {
+pub trait ReactionInfo: Sized {
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -23,14 +23,10 @@ pub trait ReactionInfo {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
-    async fn get_reaction_by_id<TU, TI>(
+    async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<(TU, TI, Self)>
-    where
-        TU: UserType,
-        TI: ItemType,
-        Self: Sized;
+    ) -> Result<(TU, TI, Self)>;
 }
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
