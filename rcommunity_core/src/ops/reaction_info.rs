@@ -19,7 +19,7 @@ where
 
 /// Ability to manage and query reaction basic information.
 #[async_trait]
-pub trait ReactionInfo: Sized + ReactionType {
+pub trait ReactionInfo: ReactionType {
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
