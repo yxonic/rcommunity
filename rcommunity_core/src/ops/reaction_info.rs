@@ -4,12 +4,11 @@ use crate::error::Error;
 use crate::{error::Result, store::Transaction, utils::typename};
 
 use crate::markers::Once;
-use crate::markers::{ItemType, ReactionType, Serializable, UserType};
+use crate::markers::{ItemType, ReactionType, UserType};
 
 /// Ability to manage and query reaction basic information.
 #[async_trait]
 pub trait ReactionInfo {
-    type Reaction: ReactionType;
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -24,10 +23,14 @@ pub trait ReactionInfo {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
-    async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
+    async fn get_reaction_by_id<TU, TI>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<(TU, TI, Self::Reaction)>;
+    ) -> Result<(TU, TI, Self)>
+    where
+        TU: UserType,
+        TI: ItemType,
+        Self: Sized;
 }
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
@@ -36,7 +39,6 @@ pub trait ReactionInfo {
 /// mapping for all reaction types.
 #[async_trait]
 impl<T: ReactionType> ReactionInfo for T {
-    default type Reaction = T;
     default async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -85,15 +87,15 @@ impl<T: ReactionType> ReactionInfo for T {
     default async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<(TU, TI, Self::Reaction)> {
-        let typename = typename::<Self::Reaction>();
+    ) -> Result<(TU, TI, Self)> {
+        let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
         let value = txn.get(key).await?;
         if let Some(v) = value {
             let fields: Vec<&str> = v.split('_').collect();
             let user = TU::deserialize(fields[0]);
             let item = TI::deserialize(fields[1]);
-            let r = Self::Reaction::deserialize(fields[2]);
+            let r = T::deserialize(fields[2]);
             return Ok((user, item, r));
         }
         Err(Error::UnknownError("TODO: change to not found".into()))
