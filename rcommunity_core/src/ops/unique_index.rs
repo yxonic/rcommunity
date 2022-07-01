@@ -58,7 +58,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!(
-            "{typename}_{}_{}_{}",
+            "u_{typename}_{}_{}_{}",
             user.serialize(),
             item.serialize(),
             self.serialize()
@@ -75,7 +75,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!(
-            "{typename}_{}_{}_{}",
+            "u_{typename}_{}_{}_{}",
             user.serialize(),
             item.serialize(),
             self.serialize()

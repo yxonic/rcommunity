@@ -1,13 +1,15 @@
 use async_trait::async_trait;
 
+use crate::error::Error;
 use crate::{error::Result, store::Transaction, utils::typename};
 
 use crate::markers::Once;
-use crate::markers::{ItemType, ReactionType, UserType};
+use crate::markers::{ItemType, ReactionType, Serializable, UserType};
 
 /// Ability to manage and query reaction basic information.
 #[async_trait]
 pub trait ReactionInfo {
+    type Reaction: ReactionType;
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -22,6 +24,10 @@ pub trait ReactionInfo {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
+    async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
+        txn: &mut impl Transaction,
+        rid: &str,
+    ) -> Result<(TU, TI, Self::Reaction)>;
 }
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
@@ -30,6 +36,7 @@ pub trait ReactionInfo {
 /// mapping for all reaction types.
 #[async_trait]
 impl<T: ReactionType> ReactionInfo for T {
+    default type Reaction = T;
     default async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -38,7 +45,22 @@ impl<T: ReactionType> ReactionInfo for T {
         item: &impl ItemType,
     ) -> Result<()> {
         let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}_{rid}", user.serialize(), item.serialize());
+        let key = format!("r_{typename}_{rid}");
+        txn.put(
+            key,
+            format!(
+                "{}_{}_{}",
+                user.serialize(),
+                item.serialize(),
+                self.serialize()
+            ),
+        )
+        .await?;
+        let key = format!(
+            "ui_{typename}_{}_{}_{rid}",
+            user.serialize(),
+            item.serialize()
+        );
         txn.put(key, self.serialize()).await?;
         Ok(())
     }
@@ -50,9 +72,31 @@ impl<T: ReactionType> ReactionInfo for T {
         item: &impl ItemType,
     ) -> Result<()> {
         let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}_{rid}", user.serialize(), item.serialize());
+        let key = format!("r_{typename}_{rid}");
+        txn.delete(key).await?;
+        let key = format!(
+            "ui_{typename}_{}_{}_{rid}",
+            user.serialize(),
+            item.serialize()
+        );
         txn.delete(key).await?;
         Ok(())
+    }
+    default async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
+        txn: &mut impl Transaction,
+        rid: &str,
+    ) -> Result<(TU, TI, Self::Reaction)> {
+        let typename = typename::<Self::Reaction>();
+        let key = format!("r_{typename}_{rid}");
+        let value = txn.get(key).await?;
+        if let Some(v) = value {
+            let fields: Vec<&str> = v.split('_').collect();
+            let user = TU::deserialize(fields[0]);
+            let item = TI::deserialize(fields[1]);
+            let r = Self::Reaction::deserialize(fields[2]);
+            return Ok((user, item, r));
+        }
+        Err(Error::UnknownError("TODO: change to not found".into()))
     }
 }
 
@@ -62,7 +106,7 @@ impl<T: ReactionType> ReactionInfo for T {
 /// reaction types that react at most once for each user-item pair.
 #[async_trait]
 impl<T: ReactionType + Once> ReactionInfo for T {
-    default async fn store_reaction(
+    async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
         rid: &str,
@@ -70,19 +114,32 @@ impl<T: ReactionType + Once> ReactionInfo for T {
         item: &impl ItemType,
     ) -> Result<()> {
         let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
+        let key = format!("r_{typename}_{rid}");
+        txn.put(
+            key,
+            format!(
+                "{}_{}_{}",
+                user.serialize(),
+                item.serialize(),
+                self.serialize()
+            ),
+        )
+        .await?;
+        let key = format!("ui_{typename}_{}_{}", user.serialize(), item.serialize());
         txn.put(key, format!("{}_{rid}", self.serialize())).await?;
         Ok(())
     }
-    default async fn discard_reaction(
+    async fn discard_reaction(
         &self,
         txn: &mut impl Transaction,
-        _rid: &str,
+        rid: &str,
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()> {
         let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
+        let key = format!("r_{typename}_{rid}");
+        txn.delete(key).await?;
+        let key = format!("ui_{typename}_{}_{}", user.serialize(), item.serialize());
         txn.delete(key).await?;
         Ok(())
     }

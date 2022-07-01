@@ -75,6 +75,9 @@ mod test {
         fn id(&self) -> &str {
             &self.0
         }
+        fn from(id: &str) -> Self {
+            User(id.into())
+        }
     }
     impl UserType for User {}
     #[derive(Clone, Debug)]
@@ -82,6 +85,9 @@ mod test {
     impl ID for Item {
         fn id(&self) -> &str {
             &self.0
+        }
+        fn from(id: &str) -> Self {
+            Item(id.into())
         }
     }
     impl ItemType for Item {}
@@ -99,6 +105,13 @@ mod test {
             }
             .into()
         }
+        fn deserialize(data: &str) -> Self {
+            if data.starts_with('U') {
+                Vote::Upvote
+            } else {
+                Vote::Downvote
+            }
+        }
     }
     impl ReactionType for Vote {}
     impl Once for Vote {}
@@ -110,6 +123,9 @@ mod test {
     impl ID for Comment {
         fn id(&self) -> &str {
             &self.0
+        }
+        fn from(id: &str) -> Self {
+            Comment(id.into())
         }
     }
 
@@ -127,21 +143,21 @@ mod test {
         let vote = client.react(Vote::Upvote).await.unwrap();
         // vote tests
         let value = txn
-            .get("Vote_User:1000_Item:2000".into())
+            .get("ui_Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
         assert_eq!(value, format!("Upvote_{}", vote.id));
 
         let value = txn
-            .get("Vote_User:1000_Item:2000_Upvote".into())
+            .get("ui_Vote_User:1000_Item:2000_Upvote".into())
             .await
             .unwrap();
         assert!(value.is_none());
 
         client.react(Vote::Downvote).await.unwrap();
         let value = txn
-            .get("Vote_User:1000_Item:2000".into())
+            .get("ui_Vote_User:1000_Item:2000".into())
             .await
             .unwrap()
             .unwrap();
@@ -157,13 +173,13 @@ mod test {
         let comment = client.react(Comment("3000".into())).await.unwrap();
 
         let value = txn
-            .get(format!("Comment_User:1000_Item:2000_{}", comment.id))
+            .get(format!("ui_Comment_User:1000_Item:2000_{}", comment.id))
             .await
             .unwrap()
             .unwrap();
         assert_eq!(&value, "Comment:3000");
         let value = txn
-            .get("Comment_User:1000_Item:2000_Comment:3000".into())
+            .get("u_Comment_User:1000_Item:2000_Comment:3000".into())
             .await
             .unwrap()
             .unwrap();

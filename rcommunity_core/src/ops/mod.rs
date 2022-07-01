@@ -25,12 +25,9 @@ pub trait Reactor {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
-    async fn dereact(
-        &self,
+    async fn dereact<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
     ) -> Result<()>;
 }
 
@@ -49,16 +46,14 @@ impl<T: ReactionType> Reactor for T {
         self.store_enum_index(txn, rid, user, item).await?;
         Ok(())
     }
-    async fn dereact(
-        &self,
+    async fn dereact<TU: UserType, TI: ItemType>(
         txn: &mut impl Transaction,
         rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
     ) -> Result<()> {
-        self.discard_reaction(txn, rid, user, item).await?;
-        self.discard_unique_index(txn, rid, user, item).await?;
-        self.discard_enum_index(txn, rid, user, item).await?;
+        let (user, item, r) = T::get_reaction_by_id::<TU, TI>(txn, rid).await?;
+        r.discard_enum_index(txn, rid, &user, &item).await?;
+        r.discard_unique_index(txn, rid, &user, &item).await?;
+        r.discard_reaction(txn, rid, &user, &item).await?;
         Ok(())
     }
 }
