@@ -3,16 +3,16 @@
 //! # Example Usage
 //! ```rust
 //! use rcommunity_core::store::memory::MemoryStore;
-//! use rcommunity_core::store::{Store, Transaction};
+//! use rcommunity_core::store::{Store, Transaction, Value};
 //!
 //! tokio_test::block_on(async {
 //!     let mut store = MemoryStore::default();
 //!     let mut txn = store.begin_txn().await.unwrap();
-//!     assert!(txn.get("key".into()).await.unwrap().is_none());
-//!     txn.put("key".into(), "value".into()).await.unwrap();
+//!     assert!(txn.get("key").await.unwrap().is_none());
+//!     txn.put("key", "value").await.unwrap();
 //!     assert_eq!(
-//!         txn.get("key".into()).await.unwrap().unwrap(),
-//!         String::from("value")
+//!         txn.get("key").await.unwrap().unwrap(),
+//!         Value::from("value")
 //!     );
 //! })
 //! ```
@@ -23,7 +23,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use crate::error::Result;
 
-use super::{Store, Transaction};
+use super::{Key, Store, Transaction, Value};
 
 type StringMap = BTreeMap<String, String>;
 
@@ -81,29 +81,38 @@ impl MemoryTransaction {
 
 #[async_trait]
 impl Transaction for MemoryTransaction {
-    async fn get(&self, key: String) -> Result<Option<String>> {
+    async fn get(&self, key: impl Into<Key> + Send) -> Result<Option<Value>> {
         let (cur_txn_id, cvar) = self.txn_lock();
+        let key = String::from(key.into());
         let value = self.store.lock().get(&key).map(String::from);
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
-        Ok(value)
+        Ok(value.map(Value::from))
     }
-    async fn get_for_update(&mut self, key: String) -> Result<Option<String>> {
+    async fn get_for_update(&mut self, key: impl Into<Key> + Send) -> Result<Option<Value>> {
         let (mut cur_txn_id, _) = self.txn_lock();
         *cur_txn_id = self.id;
-        Ok(self.store.lock().get(&key).map(String::from))
+        let key = String::from(key.into());
+        Ok(self.store.lock().get(&key).map(Value::from))
     }
-    async fn put(&mut self, key: String, value: String) -> Result<()> {
+    async fn put(
+        &mut self,
+        key: impl Into<Key> + Send,
+        value: impl Into<Value> + Send,
+    ) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
+        let key = String::from(key.into());
+        let value = String::from(value.into());
         self.store.lock().insert(key, value);
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
         Ok(())
     }
-    async fn delete(&mut self, key: String) -> Result<()> {
+    async fn delete(&mut self, key: impl Into<Key> + Send) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
+        let key = String::from(key.into());
         self.store.lock().remove(&key);
         if *cur_txn_id == 0 {
             cvar.notify_one();
@@ -125,7 +134,7 @@ impl Drop for MemoryTransaction {
 
 #[cfg(test)]
 mod test {
-    use crate::store::{Store, Transaction};
+    use crate::store::{Store, Transaction, Value};
 
     use super::MemoryStore;
 
@@ -134,34 +143,25 @@ mod test {
         let mut store = MemoryStore::default();
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert!(txn.get("key".into()).await.unwrap().is_none());
-            txn.put("key".into(), "value".into()).await.unwrap();
-            assert_eq!(
-                txn.get("key".into()).await.unwrap().unwrap(),
-                String::from("value")
-            );
+            assert!(txn.get("key").await.unwrap().is_none());
+            txn.put("key", "value").await.unwrap();
+            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from("value"));
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
             assert_eq!(
-                txn.get_for_update("key".into()).await.unwrap().unwrap(),
-                String::from("value")
+                txn.get_for_update("key").await.unwrap().unwrap(),
+                Value::from("value")
             );
-            txn.put("key".into(), "".into()).await.unwrap();
-            assert_eq!(
-                txn.get("key".into()).await.unwrap().unwrap(),
-                String::from("")
-            );
+            txn.put("key", "").await.unwrap();
+            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from(""));
             txn.commit().await.unwrap();
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(
-                txn.get("key".into()).await.unwrap().unwrap(),
-                String::from("")
-            );
-            txn.delete("key".into()).await.unwrap();
-            assert!(txn.get("key".into()).await.unwrap().is_none());
+            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from(""));
+            txn.delete("key").await.unwrap();
+            assert!(txn.get("key").await.unwrap().is_none());
         }
     }
 }

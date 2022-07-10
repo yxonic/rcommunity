@@ -99,6 +99,7 @@ impl<T: ReactionType> ReactionInfo for T {
         let key = format!("r_{typename}_{rid}");
         let value = txn.get(key).await?;
         if let Some(v) = value {
+            let v = String::from(v);
             let fields: Vec<&str> = v.split('_').collect();
             let user = TU::deserialize(fields[0]);
             let item = TI::deserialize(fields[1]);

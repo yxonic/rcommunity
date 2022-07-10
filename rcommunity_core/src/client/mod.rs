@@ -125,25 +125,24 @@ mod test {
         };
         let rid = client.react(Vote::Upvote).await.unwrap();
         // vote tests
-        let value = txn
-            .get("ui_Vote_User:1000_Item:2000".into())
+        let value: String = txn
+            .get("ui_Vote_User:1000_Item:2000")
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .into();
         assert_eq!(value, format!("Upvote_{}", rid));
 
-        let value = txn
-            .get("ui_Vote_User:1000_Item:2000_Upvote".into())
-            .await
-            .unwrap();
+        let value = txn.get("ui_Vote_User:1000_Item:2000_Upvote").await.unwrap();
         assert!(value.is_none());
 
         client.react(Vote::Downvote).await.unwrap();
-        let value = txn
-            .get("ui_Vote_User:1000_Item:2000".into())
+        let value: String = txn
+            .get("ui_Vote_User:1000_Item:2000")
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .into();
         assert!(value.starts_with("Downvote"));
 
         // comment tests
@@ -155,17 +154,19 @@ mod test {
         };
         let rid = client.react(Comment("3000".into())).await.unwrap();
 
-        let value = txn
+        let value: String = txn
             .get(format!("ui_Comment_User:1000_Item:2000_{}", rid))
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .into();
         assert_eq!(&value, "Comment:3000");
-        let value = txn
-            .get("u_Comment_User:1000_Item:2000_Comment:3000".into())
+        let value: String = txn
+            .get("u_Comment_User:1000_Item:2000_Comment:3000")
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .into();
         assert_eq!(value, rid);
     }
 }

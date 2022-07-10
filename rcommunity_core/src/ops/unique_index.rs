@@ -63,7 +63,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(key, rid.into()).await?;
+        txn.put(key, rid).await?;
         Ok(())
     }
     async fn discard_unique_index(
