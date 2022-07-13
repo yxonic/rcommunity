@@ -1,6 +1,10 @@
 use async_trait::async_trait;
 
-use crate::{error::Result, store::Transaction, utils::typename};
+use crate::{
+    error::Result,
+    store::{Key, Transaction, Value},
+    utils::typename,
+};
 
 use crate::markers::ID;
 use crate::markers::{ItemType, ReactionType, UserType};
@@ -63,7 +67,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(key, rid).await?;
+        txn.put(Key::raw(key), Value::raw(rid)).await?;
         Ok(())
     }
     async fn discard_unique_index(
@@ -80,7 +84,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.delete(key).await?;
+        txn.delete(Key::raw(key)).await?;
         Ok(())
     }
 }

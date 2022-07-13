@@ -3,16 +3,16 @@
 //! # Example Usage
 //! ```rust
 //! use rcommunity_core::store::memory::MemoryStore;
-//! use rcommunity_core::store::{Store, Transaction, Value};
+//! use rcommunity_core::store::{Key, Store, Transaction, Value};
 //!
 //! tokio_test::block_on(async {
 //!     let mut store = MemoryStore::default();
 //!     let mut txn = store.begin_txn().await.unwrap();
-//!     assert!(txn.get("key").await.unwrap().is_none());
-//!     txn.put("key", "value").await.unwrap();
+//!     assert!(txn.get(Key::raw("key")).await.unwrap().is_none());
+//!     txn.put(Key::raw("key"), Value::raw("value")).await.unwrap();
 //!     assert_eq!(
-//!         txn.get("key").await.unwrap().unwrap(),
-//!         Value::from("value")
+//!         txn.get(Key::raw("key")).await.unwrap().unwrap(),
+//!         Value::raw("value")
 //!     );
 //! })
 //! ```
@@ -88,13 +88,13 @@ impl Transaction for MemoryTransaction {
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
-        Ok(value.map(Value::from))
+        Ok(value.map(Value::raw))
     }
     async fn get_for_update(&mut self, key: impl Into<Key> + Send) -> Result<Option<Value>> {
         let (mut cur_txn_id, _) = self.txn_lock();
         *cur_txn_id = self.id;
         let key = String::from(key.into());
-        Ok(self.store.lock().get(&key).map(Value::from))
+        Ok(self.store.lock().get(&key).map(Value::raw))
     }
     async fn put(
         &mut self,
@@ -134,7 +134,7 @@ impl Drop for MemoryTransaction {
 
 #[cfg(test)]
 mod test {
-    use crate::store::{Store, Transaction, Value};
+    use crate::store::{Key, Store, Transaction, Value};
 
     use super::MemoryStore;
 
@@ -143,25 +143,34 @@ mod test {
         let mut store = MemoryStore::default();
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert!(txn.get("key").await.unwrap().is_none());
-            txn.put("key", "value").await.unwrap();
-            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from("value"));
+            assert!(txn.get(Key::raw("key")).await.unwrap().is_none());
+            txn.put(Key::raw("key"), Value::raw("value")).await.unwrap();
+            assert_eq!(
+                txn.get(Key::raw("key")).await.unwrap().unwrap(),
+                Value::raw("value")
+            );
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
             assert_eq!(
-                txn.get_for_update("key").await.unwrap().unwrap(),
-                Value::from("value")
+                txn.get_for_update(Key::raw("key")).await.unwrap().unwrap(),
+                Value::raw("value")
             );
-            txn.put("key", "").await.unwrap();
-            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from(""));
+            txn.put(Key::raw("key"), Value::raw("")).await.unwrap();
+            assert_eq!(
+                txn.get(Key::raw("key")).await.unwrap().unwrap(),
+                Value::raw("")
+            );
             txn.commit().await.unwrap();
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(txn.get("key").await.unwrap().unwrap(), Value::from(""));
-            txn.delete("key").await.unwrap();
-            assert!(txn.get("key").await.unwrap().is_none());
+            assert_eq!(
+                txn.get(Key::raw("key")).await.unwrap().unwrap(),
+                Value::raw("")
+            );
+            txn.delete(Key::raw("key")).await.unwrap();
+            assert!(txn.get(Key::raw("key")).await.unwrap().is_none());
         }
     }
 }

@@ -1,6 +1,10 @@
 use async_trait::async_trait;
 
-use crate::{error::Result, store::Transaction, utils::typename};
+use crate::{
+    error::Result,
+    store::{Key, Transaction},
+    utils::typename,
+};
 
 use crate::markers::Once;
 use crate::markers::{ItemType, ReactionType, UserType};
@@ -39,7 +43,7 @@ impl<T: ReactionType + Once> BeforeStore for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
-        let rid = txn.get(key).await?;
+        let rid = txn.get(Key::raw(key)).await?;
         if let Some(rid) = rid {
             let rid = String::from(rid);
             T::dereact::<TU, TI>(txn, &rid).await?;

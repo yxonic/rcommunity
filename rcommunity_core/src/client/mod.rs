@@ -46,7 +46,7 @@ mod test {
 
     use crate::{
         markers::{ItemType, Once, ReactionType, Serializable, UserType, ID},
-        store::{memory::MemoryStore, Store, Transaction},
+        store::{memory::MemoryStore, Key, Store, Transaction},
     };
 
     use super::UserItemUnboundedReactionClient;
@@ -126,19 +126,22 @@ mod test {
         let rid = client.react(Vote::Upvote).await.unwrap();
         // vote tests
         let value: String = txn
-            .get("ui_Vote_User:1000_Item:2000")
+            .get(Key::raw("ui_Vote_User:1000_Item:2000"))
             .await
             .unwrap()
             .unwrap()
             .into();
         assert_eq!(value, format!("Upvote_{}", rid));
 
-        let value = txn.get("ui_Vote_User:1000_Item:2000_Upvote").await.unwrap();
+        let value = txn
+            .get(Key::raw("ui_Vote_User:1000_Item:2000_Upvote"))
+            .await
+            .unwrap();
         assert!(value.is_none());
 
         client.react(Vote::Downvote).await.unwrap();
         let value: String = txn
-            .get("ui_Vote_User:1000_Item:2000")
+            .get(Key::raw("ui_Vote_User:1000_Item:2000"))
             .await
             .unwrap()
             .unwrap()
@@ -155,14 +158,14 @@ mod test {
         let rid = client.react(Comment("3000".into())).await.unwrap();
 
         let value: String = txn
-            .get(format!("ui_Comment_User:1000_Item:2000_{}", rid))
+            .get(Key::raw(format!("ui_Comment_User:1000_Item:2000_{}", rid)))
             .await
             .unwrap()
             .unwrap()
             .into();
         assert_eq!(&value, "Comment:3000");
         let value: String = txn
-            .get("u_Comment_User:1000_Item:2000_Comment:3000")
+            .get(Key::raw("u_Comment_User:1000_Item:2000_Comment:3000"))
             .await
             .unwrap()
             .unwrap()

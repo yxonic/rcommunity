@@ -1,5 +1,14 @@
+//! Store format types to help enforce consistent data se/desrialization.
+
+/// Key data format that preserves the original order.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Key(String);
+
+impl Key {
+    pub fn raw(k: impl Into<String>) -> Self {
+        Key(k.into())
+    }
+}
 
 impl From<Key> for String {
     fn from(k: Key) -> Self {
@@ -7,47 +16,18 @@ impl From<Key> for String {
     }
 }
 
-impl From<String> for Key {
-    fn from(k: String) -> Self {
-        Key(k)
-    }
-}
-
-impl From<&str> for Key {
-    fn from(k: &str) -> Self {
-        Key(k.to_string())
-    }
-}
-
-impl From<&String> for Key {
-    fn from(k: &String) -> Self {
-        Key(k.to_string())
-    }
-}
-
+/// Value data format. Currently the same as JSON.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Value(String);
+
+impl Value {
+    pub fn raw(v: impl Into<String>) -> Self {
+        Value(v.into())
+    }
+}
 
 impl From<Value> for String {
     fn from(k: Value) -> Self {
         k.0
-    }
-}
-
-impl From<String> for Value {
-    fn from(v: String) -> Self {
-        Value(v)
-    }
-}
-
-impl From<&str> for Value {
-    fn from(v: &str) -> Self {
-        Value(v.to_string())
-    }
-}
-
-impl From<&String> for Value {
-    fn from(v: &String) -> Self {
-        Value(v.to_string())
     }
 }
