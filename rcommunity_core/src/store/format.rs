@@ -2,6 +2,7 @@
 
 use std::ops::Deref;
 
+use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
 
 /// Se/deserialization-related errors.
@@ -86,17 +87,21 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Err(Error::NotSupported("bool".to_string()))
     }
 
-    fn serialize_i8(self, _v: i8) -> Result<()> {
-        Err(Error::NotSupported("i8".to_string()))
+    fn serialize_i8(self, v: i8) -> Result<()> {
+        self.serialize_i64(i64::from(v))
     }
-    fn serialize_i16(self, _v: i16) -> Result<()> {
-        Err(Error::NotSupported("i16".to_string()))
+    fn serialize_i16(self, v: i16) -> Result<()> {
+        self.serialize_i64(i64::from(v))
     }
-    fn serialize_i32(self, _v: i32) -> Result<()> {
-        Err(Error::NotSupported("i32".to_string()))
+    fn serialize_i32(self, v: i32) -> Result<()> {
+        self.serialize_i64(i64::from(v))
     }
-    fn serialize_i64(self, _v: i64) -> Result<()> {
-        Err(Error::NotSupported("i64".to_string()))
+    fn serialize_i64(self, v: i64) -> Result<()> {
+        // equivalent as v + 2^63
+        #[allow(clippy::cast_sign_loss)]
+        let v = (v as u64) ^ (1 << 63);
+        self.output.write_u64::<BigEndian>(v).unwrap(); // write to Vec will never fail
+        Ok(())
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
@@ -108,15 +113,20 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_u32(self, v: u32) -> Result<()> {
         self.serialize_u64(u64::from(v))
     }
-    fn serialize_u64(self, _v: u64) -> Result<()> {
-        todo!("serialize u64 and preserve order");
+    fn serialize_u64(self, v: u64) -> Result<()> {
+        self.output.write_u64::<BigEndian>(v).unwrap(); // write to Vec will never fail
+        Ok(())
     }
 
-    fn serialize_f32(self, _v: f32) -> Result<()> {
-        Err(Error::NotSupported("f32".to_string()))
+    fn serialize_f32(self, v: f32) -> Result<()> {
+        self.serialize_f64(f64::from(v))
     }
-    fn serialize_f64(self, _v: f64) -> Result<()> {
-        Err(Error::NotSupported("f64".to_string()))
+    fn serialize_f64(self, v: f64) -> Result<()> {
+        let v = v.to_bits();
+        // TODO: make this right
+        let v = (v ^ (v >> 63)) | ((!v) & (1 << 63));
+        self.output.write_u64::<BigEndian>(v).unwrap(); // write to Vec will never fail
+        Ok(())
     }
 
     fn serialize_char(self, _v: char) -> Result<()> {
