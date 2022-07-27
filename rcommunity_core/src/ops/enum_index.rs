@@ -67,7 +67,11 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(Key::raw(key), Value::raw("")).await?;
+        txn.put(
+            Key::raw(key.as_bytes().to_vec()),
+            Value::raw("".as_bytes().to_vec()),
+        )
+        .await?;
         Ok(())
     }
     async fn discard_enum_index(
@@ -84,7 +88,7 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.delete(Key::raw(key)).await?;
+        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
         Ok(())
     }
 }

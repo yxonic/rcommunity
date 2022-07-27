@@ -67,7 +67,11 @@ impl<T: ReactionType + ID> UniqueIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(Key::raw(key), Value::raw(rid)).await?;
+        txn.put(
+            Key::raw(key.as_bytes().to_vec()),
+            Value::raw(rid.as_bytes().to_vec()),
+        )
+        .await?;
         Ok(())
     }
     async fn discard_unique_index(
@@ -84,7 +88,7 @@ impl<T: ReactionType + ID> UniqueIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.delete(Key::raw(key)).await?;
+        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
         Ok(())
     }
 }
