@@ -123,9 +123,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
     fn serialize_f64(self, v: f64) -> Result<()> {
         let v = v.to_bits();
-        // TODO: make this right
-        let v = (v ^ (v >> 63)) | ((!v) & (1 << 63));
-        self.output.write_u64::<BigEndian>(v).unwrap(); // write to Vec will never fail
+        #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+        let mask = (-((v >> 63) as i64) as u64) | (1 << 63);
+        self.output.write_u64::<BigEndian>(v ^ mask).unwrap(); // write to Vec will never fail
         Ok(())
     }
 
