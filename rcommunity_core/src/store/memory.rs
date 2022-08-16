@@ -8,11 +8,14 @@
 //! tokio_test::block_on(async {
 //!     let mut store = MemoryStore::default();
 //!     let mut txn = store.begin_txn().await.unwrap();
-//!     assert!(txn.get(Key::raw("key")).await.unwrap().is_none());
-//!     txn.put(Key::raw("key"), Value::raw("value")).await.unwrap();
+//!     assert!(txn.get(Key::raw("key".as_bytes().to_vec())).await.unwrap().is_none());
+//!     txn.put(
+//!         Key::raw("key".as_bytes().to_vec()),
+//!         Value::raw("value".as_bytes().to_vec())
+//!     ).await.unwrap();
 //!     assert_eq!(
-//!         txn.get(Key::raw("key")).await.unwrap().unwrap(),
-//!         Value::raw("value")
+//!         txn.get(Key::raw("key".as_bytes().to_vec())).await.unwrap().unwrap(),
+//!         Value::raw("value".as_bytes().to_vec())
 //!     );
 //! })
 //! ```
