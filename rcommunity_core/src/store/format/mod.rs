@@ -1,38 +1,15 @@
 //! Store format types to help enforce consistent data se/desrialization.
 
+/// Se/deserialization-related errors.
+pub mod error;
+
+#[cfg(test)]
+mod tests;
+
 use std::ops::Deref;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
-
-/// Se/deserialization-related errors.
-pub mod error {
-    use serde::{de, ser};
-    use std::fmt::Display;
-    use thiserror::Error;
-
-    #[derive(Error, Debug)]
-    pub enum Error {
-        #[error("Unknown error: {0}.")]
-        UnknownError(String),
-        #[error("Serializing {0} is not supported.")]
-        NotSupported(String),
-    }
-
-    impl ser::Error for Error {
-        fn custom<T: Display>(msg: T) -> Self {
-            Error::UnknownError(msg.to_string())
-        }
-    }
-
-    impl de::Error for Error {
-        fn custom<T: Display>(msg: T) -> Self {
-            Error::UnknownError(msg.to_string())
-        }
-    }
-
-    pub type Result<T> = core::result::Result<T, Error>;
-}
 
 use error::{Error, Result};
 
@@ -348,10 +325,4 @@ impl Deref for Value {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
-}
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test_key_serialization() {}
 }
