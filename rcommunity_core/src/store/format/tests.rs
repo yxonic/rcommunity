@@ -1,4 +1,16 @@
-use super::to_key;
+use super::{to_key, Key, Placeholder};
+
+#[derive(serde::Serialize)]
+struct User(u64);
+
+#[test]
+fn test_key_serialization() {
+    assert!(to_key("").unwrap() == Key::raw(b"".to_vec()));
+    assert!(to_key(&()).unwrap() == Key::raw(b"".to_vec()));
+    assert!(String::from_utf8_lossy(to_key(&User(32)).unwrap().as_ref()).starts_with("User:"));
+
+    assert!(to_key(&Placeholder::<User>::new()).unwrap() == Key::raw(b"User:".to_vec()));
+}
 
 #[test]
 fn test_key_ordering() {

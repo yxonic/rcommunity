@@ -6,13 +6,15 @@ pub mod error;
 #[cfg(test)]
 mod tests;
 
-use std::io::Write;
 use std::ops::Deref;
+use std::{io::Write, marker::PhantomData};
 
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
 
 use error::{Error, Result};
+
+use crate::utils::typename;
 
 /// Serialize object to store key.
 ///
@@ -40,6 +42,35 @@ impl Deref for Key {
 
     fn deref(&self) -> &Vec<u8> {
         &self.0
+    }
+}
+
+#[derive(Debug)]
+pub struct Placeholder<T: ?Sized> {
+    phantom: PhantomData<T>,
+}
+
+impl<T: ?Sized> Placeholder<T> {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: ?Sized> Default for Placeholder<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: ?Sized> Serialize for Placeholder<T> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error> {
+        serializer.serialize_str(&(typename::<T>().to_owned() + ":"))
     }
 }
 
@@ -133,18 +164,16 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_unit(self) -> Result<()> {
         Ok(())
     }
-    fn serialize_unit_struct(self, name: &'static str) -> Result<()> {
-        self.serialize_str(name)?;
-        self.serialize_str(":")
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
+        Err(Error::NotSupported("unit struct".to_string()))
     }
-
     fn serialize_unit_variant(
         self,
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        Err(Error::NotSupported("unit".to_string()))
+        Err(Error::NotSupported("unit variant".to_string()))
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(
