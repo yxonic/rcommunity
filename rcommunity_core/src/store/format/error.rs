@@ -4,6 +4,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Conversion error: {0}.")]
+    ConversionError(std::num::TryFromIntError),
     #[error("Unknown error: {0}.")]
     UnknownError(String),
     #[error("Serializing {0} is not supported.")]

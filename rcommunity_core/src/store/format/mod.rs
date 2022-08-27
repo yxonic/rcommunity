@@ -6,6 +6,7 @@ pub mod error;
 #[cfg(test)]
 mod tests;
 
+use std::io::Write;
 use std::ops::Deref;
 
 use byteorder::{BigEndian, WriteBytesExt};
@@ -13,8 +14,18 @@ use serde::{ser, Serialize};
 
 use error::{Error, Result};
 
+/// Serialize object to store key.
+///
+/// # Errors
+/// Will return `Err` if value is not serializable as store key.
+pub fn to_key<T: Serialize + ?Sized>(value: &T) -> Result<Key> {
+    let mut serializer = Serializer { output: Vec::new() };
+    value.serialize(&mut serializer)?;
+    Ok(Key(serializer.output))
+}
+
 /// Key data format that preserves the original order.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
 pub struct Key(pub(crate) Vec<u8>);
 
 impl Key {
@@ -37,16 +48,6 @@ pub struct Serializer {
     output: Vec<u8>,
 }
 
-/// Serialize object to store key.
-///
-/// # Errors
-/// Will return `Err` if value is not serializable as store key.
-pub fn to_key<T: Serialize>(value: &T) -> Result<Key> {
-    let mut serializer = Serializer { output: Vec::new() };
-    value.serialize(&mut serializer)?;
-    Ok(Key(serializer.output))
-}
-
 impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = ();
 
@@ -60,8 +61,12 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     type SerializeStruct = Self;
     type SerializeStructVariant = Self;
 
-    fn serialize_bool(self, _v: bool) -> Result<()> {
-        Err(Error::NotSupported("bool".to_string()))
+    fn serialize_bool(self, v: bool) -> Result<()> {
+        if v {
+            self.serialize_str("true")
+        } else {
+            self.serialize_str("false")
+        }
     }
 
     fn serialize_i8(self, v: i8) -> Result<()> {
@@ -82,17 +87,16 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+        self.serialize_i64(v.into())
     }
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+        self.serialize_i64(v.into())
     }
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+        self.serialize_i64(v.into())
     }
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.output.write_u64::<BigEndian>(v).unwrap(); // write to Vec will never fail
-        Ok(())
+        self.serialize_i64(v.try_into().map_err(error::Error::ConversionError)?)
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {
@@ -106,29 +110,34 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
 
-    fn serialize_char(self, _v: char) -> Result<()> {
-        Err(Error::NotSupported("char".to_string()))
+    fn serialize_char(self, v: char) -> Result<()> {
+        self.serialize_str(&v.to_string())
     }
-    fn serialize_str(self, _v: &str) -> Result<()> {
-        todo!("serialize str and preserve order");
+    fn serialize_str(self, v: &str) -> Result<()> {
+        self.output.write_all(v.as_bytes()).unwrap(); // write to Vec will never fail
+        Ok(())
     }
 
-    fn serialize_bytes(self, _v: &[u8]) -> Result<()> {
-        todo!("serialize bytes and preserve order");
+    fn serialize_bytes(self, v: &[u8]) -> Result<()> {
+        self.output.write_all(v).unwrap(); // write to Vec will never fail
+        Ok(())
     }
 
     fn serialize_none(self) -> Result<()> {
-        todo!("serialize none");
+        Ok(())
     }
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<()> {
         value.serialize(self)
     }
+
     fn serialize_unit(self) -> Result<()> {
-        self.serialize_none()
+        Ok(())
     }
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        Err(Error::NotSupported("unit".to_string()))
+    fn serialize_unit_struct(self, name: &'static str) -> Result<()> {
+        self.serialize_str(name)?;
+        self.serialize_str(":")
     }
+
     fn serialize_unit_variant(
         self,
         _name: &'static str,
@@ -309,7 +318,7 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
 }
 
 /// Value data format. Currently the same as JSON.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
 pub struct Value(pub(crate) Vec<u8>);
 
 impl Value {
