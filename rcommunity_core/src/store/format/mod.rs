@@ -6,8 +6,8 @@ pub mod error;
 #[cfg(test)]
 mod tests;
 
+use std::marker::PhantomData;
 use std::ops::Deref;
-use std::{io::Write, marker::PhantomData};
 
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
@@ -145,12 +145,12 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_str(&v.to_string())
     }
     fn serialize_str(self, v: &str) -> Result<()> {
-        self.output.write_all(v.as_bytes()).unwrap(); // write to Vec will never fail
+        self.output.extend(v.as_bytes());
         Ok(())
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
-        self.output.write_all(v).unwrap(); // write to Vec will never fail
+        self.output.extend(v);
         Ok(())
     }
 
@@ -226,8 +226,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         todo!()
     }
 
-    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        todo!()
+    fn serialize_struct(self, name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
+        self.serialize_str(name)?;
+        Ok(self)
     }
 
     fn serialize_struct_variant(
@@ -319,13 +320,14 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
         _key: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<()> {
-        todo!()
+        self.output.push(b'_');
+        value.serialize(&mut **self)
     }
 
     fn end(self) -> Result<()> {
-        todo!()
+        Ok(())
     }
 }
 
