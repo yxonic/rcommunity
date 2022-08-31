@@ -63,7 +63,7 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(key, "".into()).await?;
+        txn.put(key.as_bytes(), b"").await?;
         Ok(())
     }
     async fn discard_enum_index(
@@ -80,7 +80,7 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.delete(key).await?;
+        txn.delete(key.as_bytes()).await?;
         Ok(())
     }
 }

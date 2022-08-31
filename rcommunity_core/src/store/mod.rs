@@ -1,5 +1,6 @@
 //! Traits and implementations for the backing storage layer.
 
+pub mod format;
 pub mod memory;
 
 use async_trait::async_trait;
@@ -19,14 +20,14 @@ pub trait Store {
 #[async_trait]
 pub trait Transaction: Send + Sync {
     /// Get the value of a key from store.
-    async fn get(&self, key: String) -> Result<Option<String>>;
+    async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     /// Get the value of a key from store, while blocking reads/writes from other transactions.
     /// Useful for concurrent global updates.
-    async fn get_for_update(&mut self, key: String) -> Result<Option<String>>;
+    async fn get_for_update(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     /// Put a key-value pair in store.
-    async fn put(&mut self, key: String, value: String) -> Result<()>;
+    async fn put(&mut self, key: &[u8], value: &[u8]) -> Result<()>;
     /// Deletes the given key and its value from store.
-    async fn delete(&mut self, key: String) -> Result<()>;
+    async fn delete(&mut self, key: &[u8]) -> Result<()>;
     /// Commit this transaction.
     async fn commit(&mut self) -> Result<()>;
     /// Rollback this transaction. Implementation of this method is not required.

@@ -39,8 +39,9 @@ impl<T: ReactionType + Once> BeforeStore for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
-        let rid = txn.get(key).await?;
+        let rid = txn.get(key.as_bytes()).await?;
         if let Some(rid) = rid {
+            let rid = String::from_utf8(rid).unwrap();
             T::dereact::<TU, TI>(txn, &rid).await?;
         }
         Ok(())
