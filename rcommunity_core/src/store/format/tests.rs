@@ -1,4 +1,4 @@
-use super::{to_key, Key, Placeholder};
+use super::{to_key, Placeholder};
 
 #[derive(serde::Serialize)]
 struct User(String);
@@ -28,10 +28,10 @@ struct QueryItem {
 
 #[test]
 fn test_key_serialization() {
-    assert!(to_key("").unwrap() == Key::raw(b"".to_vec()));
-    assert!(to_key(&()).unwrap() == Key::raw(b"".to_vec()));
-    assert!(to_key(&User("a".to_string())).unwrap() == Key::raw(b"User:a".to_vec()));
-    assert!(to_key(&Placeholder::<User>::new()).unwrap() == Key::raw(b"User:".to_vec()));
+    assert!(to_key("").unwrap() == b"");
+    assert!(to_key(&()).unwrap() == b"");
+    assert!(to_key(&User("a".to_string())).unwrap() == b"User:a");
+    assert!(to_key(&Placeholder::<User>::new()).unwrap() == b"User:");
 
     assert!(
         to_key(&Index {
@@ -39,7 +39,7 @@ fn test_key_serialization() {
             item: Item("b".to_string())
         })
         .unwrap()
-            == Key::raw(b"Index_User:a_Item:b".to_vec())
+            == b"Index_User:a_Item:b"
     );
     assert!(
         to_key(&Query {
@@ -47,7 +47,7 @@ fn test_key_serialization() {
             item: (),
         })
         .unwrap()
-            == Key::raw(b"Index_User:a_".to_vec())
+            == b"Index_User:a_"
     );
     assert!(
         to_key(&QueryItem {
@@ -55,7 +55,7 @@ fn test_key_serialization() {
             item: Placeholder::new()
         })
         .unwrap()
-            == Key::raw(b"Index_User:a_Item:".to_vec())
+            == b"Index_User:a_Item:"
     );
 }
 

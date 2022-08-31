@@ -1,11 +1,7 @@
 use async_trait::async_trait;
 
 use crate::error::Error;
-use crate::{
-    error::Result,
-    store::{Key, Transaction, Value},
-    utils::typename,
-};
+use crate::{error::Result, store::Transaction, utils::typename};
 
 use crate::markers::Once;
 use crate::markers::{ItemType, ReactionType, UserType};
@@ -60,17 +56,14 @@ impl<T: ReactionType> ReactionInfo for T {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
         txn.put(
-            Key::raw(key.as_bytes().to_vec()),
-            Value::raw(
-                format!(
-                    "{}_{}_{}",
-                    user.serialize(),
-                    item.serialize(),
-                    self.serialize()
-                )
-                .as_bytes()
-                .to_vec(),
-            ),
+            key.as_bytes(),
+            format!(
+                "{}_{}_{}",
+                user.serialize(),
+                item.serialize(),
+                self.serialize()
+            )
+            .as_bytes(),
         )
         .await?;
         let key = format!(
@@ -78,11 +71,7 @@ impl<T: ReactionType> ReactionInfo for T {
             user.serialize(),
             item.serialize()
         );
-        txn.put(
-            Key::raw(key.as_bytes().to_vec()),
-            Value::raw(self.serialize().as_bytes().to_vec()),
-        )
-        .await?;
+        txn.put(key.as_bytes(), self.serialize().as_bytes()).await?;
         Ok(())
     }
     default async fn discard_reaction(
@@ -94,13 +83,13 @@ impl<T: ReactionType> ReactionInfo for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
-        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
+        txn.delete(key.as_bytes()).await?;
         let key = format!(
             "ui_{typename}_{}_{}_{rid}",
             user.serialize(),
             item.serialize()
         );
-        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
+        txn.delete(key.as_bytes()).await?;
         Ok(())
     }
     default async fn get_reaction_by_id<TU: UserType, TI: ItemType>(
@@ -109,9 +98,9 @@ impl<T: ReactionType> ReactionInfo for T {
     ) -> Result<Reaction<TU, TI, T>> {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
-        let value = txn.get(Key::raw(key.as_bytes().to_vec())).await?;
+        let value = txn.get(key.as_bytes()).await?;
         if let Some(v) = value {
-            let v = String::from_utf8(v.0).unwrap();
+            let v = String::from_utf8(v).unwrap();
             let fields: Vec<&str> = v.split('_').collect();
             let user = TU::deserialize(fields[0]);
             let item = TI::deserialize(fields[1]);
@@ -142,23 +131,20 @@ impl<T: ReactionType + Once> ReactionInfo for T {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
         txn.put(
-            Key::raw(key.as_bytes().to_vec()),
-            Value::raw(
-                format!(
-                    "{}_{}_{}",
-                    user.serialize(),
-                    item.serialize(),
-                    self.serialize()
-                )
-                .as_bytes()
-                .to_vec(),
-            ),
+            key.as_bytes(),
+            format!(
+                "{}_{}_{}",
+                user.serialize(),
+                item.serialize(),
+                self.serialize()
+            )
+            .as_bytes(),
         )
         .await?;
         let key = format!("ui_{typename}_{}_{}", user.serialize(), item.serialize());
         txn.put(
-            Key::raw(key.as_bytes().to_vec()),
-            Value::raw(format!("{}_{rid}", self.serialize()).as_bytes().to_vec()),
+            key.as_bytes(),
+            format!("{}_{rid}", self.serialize()).as_bytes(),
         )
         .await?;
         Ok(())
@@ -172,9 +158,9 @@ impl<T: ReactionType + Once> ReactionInfo for T {
     ) -> Result<()> {
         let typename = typename::<T>();
         let key = format!("r_{typename}_{rid}");
-        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
+        txn.delete(key.as_bytes()).await?;
         let key = format!("ui_{typename}_{}_{}", user.serialize(), item.serialize());
-        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
+        txn.delete(key.as_bytes()).await?;
         Ok(())
     }
 }

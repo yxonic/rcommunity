@@ -3,19 +3,16 @@
 //! # Example Usage
 //! ```rust
 //! use rcommunity_core::store::memory::MemoryStore;
-//! use rcommunity_core::store::{Key, Store, Transaction, Value};
+//! use rcommunity_core::store::{Store, Transaction};
 //!
 //! tokio_test::block_on(async {
 //!     let mut store = MemoryStore::default();
 //!     let mut txn = store.begin_txn().await.unwrap();
-//!     assert!(txn.get(Key::raw("key".as_bytes().to_vec())).await.unwrap().is_none());
-//!     txn.put(
-//!         Key::raw("key".as_bytes().to_vec()),
-//!         Value::raw("value".as_bytes().to_vec())
-//!     ).await.unwrap();
+//!     assert!(txn.get(b"key").await.unwrap().is_none());
+//!     txn.put(b"key", b"value").await.unwrap();
 //!     assert_eq!(
-//!         txn.get(Key::raw("key".as_bytes().to_vec())).await.unwrap().unwrap(),
-//!         Value::raw("value".as_bytes().to_vec())
+//!         txn.get(b"key").await.unwrap().unwrap(),
+//!         b"value",
 //!     );
 //! })
 //! ```
@@ -26,7 +23,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use crate::error::Result;
 
-use super::{Key, Store, Transaction, Value};
+use super::{Store, Transaction};
 
 type ByteMap = BTreeMap<Vec<u8>, Vec<u8>>;
 
@@ -84,39 +81,30 @@ impl MemoryTransaction {
 
 #[async_trait]
 impl Transaction for MemoryTransaction {
-    async fn get(&self, key: impl Into<Key> + Send) -> Result<Option<Value>> {
+    async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>> {
         let (cur_txn_id, cvar) = self.txn_lock();
-        let key = key.into();
-        let value = self.store.lock().get(&key.0).map(|v| Value::raw(v.clone()));
+        let value = self.store.lock().get(key).cloned();
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
         Ok(value)
     }
-    async fn get_for_update(&mut self, key: impl Into<Key> + Send) -> Result<Option<Value>> {
+    async fn get_for_update(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>> {
         let (mut cur_txn_id, _) = self.txn_lock();
         *cur_txn_id = self.id;
-        let key = key.into();
-        Ok(self.store.lock().get(&key.0).map(|v| Value::raw(v.clone())))
+        Ok(self.store.lock().get(key).cloned())
     }
-    async fn put(
-        &mut self,
-        key: impl Into<Key> + Send,
-        value: impl Into<Value> + Send,
-    ) -> Result<()> {
+    async fn put(&mut self, key: &[u8], value: &[u8]) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
-        let key = key.into();
-        let value = value.into();
-        self.store.lock().insert(key.0, value.0);
+        self.store.lock().insert(key.to_vec(), value.to_vec());
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
         Ok(())
     }
-    async fn delete(&mut self, key: impl Into<Key> + Send) -> Result<()> {
+    async fn delete(&mut self, key: &[u8]) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
-        let key = key.into();
-        self.store.lock().remove(&key.0);
+        self.store.lock().remove(key);
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
@@ -137,7 +125,7 @@ impl Drop for MemoryTransaction {
 
 #[cfg(test)]
 mod test {
-    use crate::store::{Key, Store, Transaction, Value};
+    use crate::store::{Store, Transaction};
 
     use super::MemoryStore;
 
@@ -146,66 +134,22 @@ mod test {
         let mut store = MemoryStore::default();
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert!(txn
-                .get(Key::raw("key".as_bytes().to_vec()))
-                .await
-                .unwrap()
-                .is_none());
-            txn.put(
-                Key::raw("key".as_bytes().to_vec()),
-                Value::raw("value".as_bytes().to_vec()),
-            )
-            .await
-            .unwrap();
-            assert_eq!(
-                txn.get(Key::raw("key".as_bytes().to_vec()))
-                    .await
-                    .unwrap()
-                    .unwrap(),
-                Value::raw("value".as_bytes().to_vec())
-            );
+            assert!(txn.get(b"key").await.unwrap().is_none());
+            txn.put(b"key", b"value").await.unwrap();
+            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"value");
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(
-                txn.get_for_update(Key::raw("key".as_bytes().to_vec()))
-                    .await
-                    .unwrap()
-                    .unwrap(),
-                Value::raw("value".as_bytes().to_vec())
-            );
-            txn.put(
-                Key::raw("key".as_bytes().to_vec()),
-                Value::raw("".as_bytes().to_vec()),
-            )
-            .await
-            .unwrap();
-            assert_eq!(
-                txn.get(Key::raw("key".as_bytes().to_vec()))
-                    .await
-                    .unwrap()
-                    .unwrap(),
-                Value::raw("".as_bytes().to_vec())
-            );
+            assert_eq!(txn.get_for_update(b"key").await.unwrap().unwrap(), b"value");
+            txn.put(b"key", b"").await.unwrap();
+            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
             txn.commit().await.unwrap();
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(
-                txn.get(Key::raw("key".as_bytes().to_vec()))
-                    .await
-                    .unwrap()
-                    .unwrap(),
-                Value::raw("".as_bytes().to_vec())
-            );
-            txn.delete(Key::raw("key".as_bytes().to_vec()))
-                .await
-                .unwrap();
-            assert!(txn
-                .get(Key::raw("key".as_bytes().to_vec()))
-                .await
-                .unwrap()
-                .is_none());
+            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
+            txn.delete(b"key").await.unwrap();
+            assert!(txn.get(b"key").await.unwrap().is_none());
         }
     }
 }

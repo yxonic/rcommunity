@@ -7,8 +7,6 @@ use async_trait::async_trait;
 
 use crate::error::Result;
 
-pub use format::{Key, Value};
-
 /// Abstraction for the backing storage layer. Represents a transactional API.
 #[async_trait]
 pub trait Store {
@@ -22,18 +20,14 @@ pub trait Store {
 #[async_trait]
 pub trait Transaction: Send + Sync {
     /// Get the value of a key from store.
-    async fn get(&self, key: impl Into<Key> + Send) -> Result<Option<Value>>;
+    async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     /// Get the value of a key from store, while blocking reads/writes from other transactions.
     /// Useful for concurrent global updates.
-    async fn get_for_update(&mut self, key: impl Into<Key> + Send) -> Result<Option<Value>>;
+    async fn get_for_update(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     /// Put a key-value pair in store.
-    async fn put(
-        &mut self,
-        key: impl Into<Key> + Send,
-        value: impl Into<Value> + Send,
-    ) -> Result<()>;
+    async fn put(&mut self, key: &[u8], value: &[u8]) -> Result<()>;
     /// Deletes the given key and its value from store.
-    async fn delete(&mut self, key: impl Into<Key> + Send) -> Result<()>;
+    async fn delete(&mut self, key: &[u8]) -> Result<()>;
     /// Commit this transaction.
     async fn commit(&mut self) -> Result<()>;
     /// Rollback this transaction. Implementation of this method is not required.

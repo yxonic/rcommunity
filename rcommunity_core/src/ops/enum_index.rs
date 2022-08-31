@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    error::Result,
-    store::{Key, Transaction, Value},
-    utils::typename,
-};
+use crate::{error::Result, store::Transaction, utils::typename};
 
 use crate::markers::Enumerable;
 use crate::markers::{ItemType, ReactionType, UserType};
@@ -67,11 +63,7 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.put(
-            Key::raw(key.as_bytes().to_vec()),
-            Value::raw("".as_bytes().to_vec()),
-        )
-        .await?;
+        txn.put(key.as_bytes(), b"").await?;
         Ok(())
     }
     async fn discard_enum_index(
@@ -88,7 +80,7 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
             item.serialize(),
             self.serialize()
         );
-        txn.delete(Key::raw(key.as_bytes().to_vec())).await?;
+        txn.delete(key.as_bytes()).await?;
         Ok(())
     }
 }

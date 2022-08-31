@@ -7,7 +7,6 @@ pub mod error;
 mod tests;
 
 use std::marker::PhantomData;
-use std::ops::Deref;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
@@ -20,58 +19,10 @@ use crate::utils::typename;
 ///
 /// # Errors
 /// Will return `Err` if value is not serializable as store key.
-pub fn to_key<T: Serialize + ?Sized>(value: &T) -> Result<Key> {
+pub fn to_key<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
     let mut serializer = Serializer { output: Vec::new() };
     value.serialize(&mut serializer)?;
-    Ok(Key(serializer.output))
-}
-
-/// Key data format that preserves the original order.
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
-pub struct Key(pub(crate) Vec<u8>);
-
-impl Key {
-    #[must_use]
-    pub fn raw(k: Vec<u8>) -> Self {
-        Key(k)
-    }
-}
-
-impl Deref for Key {
-    type Target = Vec<u8>;
-
-    fn deref(&self) -> &Vec<u8> {
-        &self.0
-    }
-}
-
-#[derive(Debug)]
-pub struct Placeholder<T: ?Sized> {
-    phantom: PhantomData<T>,
-}
-
-impl<T: ?Sized> Placeholder<T> {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<T: ?Sized> Default for Placeholder<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T: ?Sized> Serialize for Placeholder<T> {
-    fn serialize<S: serde::Serializer>(
-        &self,
-        serializer: S,
-    ) -> std::result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error> {
-        serializer.serialize_str(&(typename::<T>().to_owned() + ":"))
-    }
+    Ok(serializer.output)
 }
 
 /// Custom serializer that encode object as store key.
@@ -348,21 +299,31 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
     }
 }
 
-/// Value data format. Currently the same as JSON.
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
-pub struct Value(pub(crate) Vec<u8>);
+#[derive(Debug)]
+pub struct Placeholder<T: ?Sized> {
+    phantom: PhantomData<T>,
+}
 
-impl Value {
+impl<T: ?Sized> Placeholder<T> {
     #[must_use]
-    pub fn raw(v: Vec<u8>) -> Self {
-        Value(v)
+    pub fn new() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
     }
 }
 
-impl Deref for Value {
-    type Target = Vec<u8>;
+impl<T: ?Sized> Default for Placeholder<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<T: ?Sized> Serialize for Placeholder<T> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error> {
+        serializer.serialize_str(&(typename::<T>().to_owned() + ":"))
     }
 }
