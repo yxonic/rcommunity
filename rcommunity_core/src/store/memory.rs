@@ -89,11 +89,13 @@ impl Transaction for MemoryTransaction {
         }
         Ok(value)
     }
+
     async fn get_for_update(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>> {
         let (mut cur_txn_id, _) = self.txn_lock();
         *cur_txn_id = self.id;
         Ok(self.store.lock().get(key).cloned())
     }
+
     async fn put(&mut self, key: &[u8], value: &[u8]) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
         self.store.lock().insert(key.to_vec(), value.to_vec());
@@ -102,6 +104,51 @@ impl Transaction for MemoryTransaction {
         }
         Ok(())
     }
+
+    async fn scan(
+        &self,
+        start: &[u8],
+        end: &[u8],
+        take: Option<usize>,
+    ) -> Result<Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>> {
+        let (cur_txn_id, cvar) = self.txn_lock();
+        // needs collect here to pass across async boundary
+        #[allow(clippy::needless_collect)]
+        let value: Vec<(Vec<u8>, Vec<u8>)> = self
+            .store
+            .lock()
+            .range(start.to_vec()..end.to_vec())
+            .take(take.unwrap_or(usize::MAX))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        if *cur_txn_id == 0 {
+            cvar.notify_one();
+        }
+        Ok(Box::new(value.into_iter()))
+    }
+
+    async fn scan_keys(
+        &self,
+        start: &[u8],
+        end: &[u8],
+        take: Option<usize>,
+    ) -> Result<Box<dyn Iterator<Item = Vec<u8>>>> {
+        let (cur_txn_id, cvar) = self.txn_lock();
+        // needs collect here to pass across async boundary
+        #[allow(clippy::needless_collect)]
+        let value: Vec<Vec<u8>> = self
+            .store
+            .lock()
+            .range(start.to_vec()..end.to_vec())
+            .take(take.unwrap_or(usize::MAX))
+            .map(|(k, _)| k.clone())
+            .collect();
+        if *cur_txn_id == 0 {
+            cvar.notify_one();
+        }
+        Ok(Box::new(value.into_iter()))
+    }
+
     async fn delete(&mut self, key: &[u8]) -> Result<()> {
         let (cur_txn_id, cvar) = self.txn_lock();
         self.store.lock().remove(key);
@@ -110,6 +157,7 @@ impl Transaction for MemoryTransaction {
         }
         Ok(())
     }
+
     async fn commit(&mut self) -> Result<()> {
         self.release_txn_lock();
         Ok(())
@@ -144,6 +192,28 @@ mod test {
             txn.put(b"key", b"").await.unwrap();
             assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
             txn.commit().await.unwrap();
+        }
+        {
+            let mut txn = store.begin_txn().await.unwrap();
+            txn.put(b"key2", b"v2").await.unwrap();
+            assert!(
+                txn.scan(b"key", b"key3", None)
+                    .await
+                    .unwrap()
+                    .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
+                    == vec![
+                        (b"key".to_vec(), b"".to_vec()),
+                        (b"key2".to_vec(), b"v2".to_vec())
+                    ]
+            );
+            txn.put(b"key4", b"v4").await.unwrap();
+            assert!(
+                txn.scan_keys(b"key", b"key3", None)
+                    .await
+                    .unwrap()
+                    .collect::<Vec<Vec<u8>>>()
+                    == vec![b"key".to_vec(), b"key2".to_vec()]
+            );
         }
         {
             let mut txn = store.begin_txn().await.unwrap();
