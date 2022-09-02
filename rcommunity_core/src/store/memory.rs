@@ -109,7 +109,7 @@ impl Transaction for MemoryTransaction {
         &self,
         start: &[u8],
         end: &[u8],
-        take: Option<usize>,
+        limit: usize,
     ) -> Result<Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>> {
         let (cur_txn_id, cvar) = self.txn_lock();
         // needs collect here to pass across async boundary
@@ -118,7 +118,7 @@ impl Transaction for MemoryTransaction {
             .store
             .lock()
             .range(start.to_vec()..end.to_vec())
-            .take(take.unwrap_or(usize::MAX))
+            .take(limit)
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
         if *cur_txn_id == 0 {
@@ -131,7 +131,7 @@ impl Transaction for MemoryTransaction {
         &self,
         start: &[u8],
         end: &[u8],
-        take: Option<usize>,
+        limit: usize,
     ) -> Result<Box<dyn Iterator<Item = Vec<u8>>>> {
         let (cur_txn_id, cvar) = self.txn_lock();
         // needs collect here to pass across async boundary
@@ -140,7 +140,7 @@ impl Transaction for MemoryTransaction {
             .store
             .lock()
             .range(start.to_vec()..end.to_vec())
-            .take(take.unwrap_or(usize::MAX))
+            .take(limit)
             .map(|(k, _)| k.clone())
             .collect();
         if *cur_txn_id == 0 {
@@ -197,7 +197,7 @@ mod test {
             let mut txn = store.begin_txn().await.unwrap();
             txn.put(b"key2", b"v2").await.unwrap();
             assert!(
-                txn.scan(b"key", b"key3", None)
+                txn.scan(b"key", b"key3", 10)
                     .await
                     .unwrap()
                     .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
@@ -206,9 +206,16 @@ mod test {
                         (b"key2".to_vec(), b"v2".to_vec())
                     ]
             );
+            assert!(
+                txn.scan(b"key", b"key3", 1)
+                    .await
+                    .unwrap()
+                    .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
+                    == vec![(b"key".to_vec(), b"".to_vec())]
+            );
             txn.put(b"key4", b"v4").await.unwrap();
             assert!(
-                txn.scan_keys(b"key", b"key3", None)
+                txn.scan_keys(b"key", b"key3", 10)
                     .await
                     .unwrap()
                     .collect::<Vec<Vec<u8>>>()

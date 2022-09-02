@@ -33,14 +33,14 @@ pub trait Transaction: Send + Sync {
         &self,
         start: &[u8],
         end: &[u8],
-        take: Option<usize>,
+        limit: usize,
     ) -> Result<Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>>;
     /// Scan for all keys within a key range from store.
     async fn scan_keys(
         &self,
         start: &[u8],
         end: &[u8],
-        take: Option<usize>,
+        limit: usize,
     ) -> Result<Box<dyn Iterator<Item = Vec<u8>>>>;
     /// Commit this transaction.
     async fn commit(&mut self) -> Result<()>;
