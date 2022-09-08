@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use byteorder::{BigEndian, ReadBytesExt};
-use serde::de::{self, Visitor};
+use serde::de::{self, SeqAccess, Visitor};
 
 use super::error::{Error, Result};
 
@@ -52,10 +52,7 @@ impl<'de> Deserializer<'de> {
         Ok(f64::from_bits(v ^ mask))
     }
 
-    fn parse_bytes(&mut self) -> Result<Vec<u8>> {
-        if self.input.is_empty() {
-            return Err(Error::UnexpectedEnd);
-        }
+    fn parse_bytes(&mut self) -> Vec<u8> {
         let mut bytes = Vec::new();
         for v in self.input.iter() {
             if v == &b':' || v == &b'_' {
@@ -64,7 +61,7 @@ impl<'de> Deserializer<'de> {
             bytes.push(*v);
         }
         self.input = &self.input[bytes.len()..];
-        Ok(bytes)
+        bytes
     }
 }
 
@@ -195,28 +192,28 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_str(&String::from_utf8_lossy(&self.parse_bytes()?))
+        visitor.visit_str(&String::from_utf8_lossy(&self.parse_bytes()))
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(String::from_utf8_lossy(&self.parse_bytes()?).to_string())
+        visitor.visit_string(String::from_utf8_lossy(&self.parse_bytes()).to_string())
     }
 
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_bytes(&self.parse_bytes()?)
+        visitor.visit_bytes(&self.parse_bytes())
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_byte_buf(self.parse_bytes()?)
+        visitor.visit_byte_buf(self.parse_bytes())
     }
 
     fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value>
@@ -226,11 +223,11 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         todo!()
     }
 
-    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        todo!()
+        visitor.visit_unit()
     }
 
     fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
@@ -240,11 +237,13 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         todo!()
     }
 
-    fn deserialize_newtype_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        todo!()
+        // remove type name and comma
+        self.input = &self.input[name.len() + 1..];
+        visitor.visit_newtype_struct(self)
     }
 
     fn deserialize_seq<V>(self, _visitor: V) -> Result<V::Value>
@@ -282,14 +281,16 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
 
     fn deserialize_struct<V>(
         self,
-        _name: &'static str,
+        name: &'static str,
         _fields: &'static [&'static str],
-        _visitor: V,
+        visitor: V,
     ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        todo!()
+        // skip name
+        self.input = &self.input[name.len()..];
+        visitor.visit_seq(self)
     }
 
     fn deserialize_enum<V>(
@@ -316,5 +317,21 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         todo!()
+    }
+}
+
+impl<'de> SeqAccess<'de> for Deserializer<'de> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: de::DeserializeSeed<'de>,
+    {
+        if self.input.is_empty() {
+            return Ok(None);
+        }
+        // skip leading underscore
+        self.input = &self.input[1..];
+        seed.deserialize(self).map(Some)
     }
 }

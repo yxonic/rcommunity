@@ -11,7 +11,7 @@ mod tests;
 
 use std::marker::PhantomData;
 
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 use crate::utils::typename;
 use error::Result;
@@ -39,7 +39,7 @@ where
     Ok(t)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Placeholder<T: ?Sized> {
     phantom: PhantomData<T>,
 }
@@ -64,6 +64,41 @@ impl<T: ?Sized> Serialize for Placeholder<T> {
         &self,
         serializer: S,
     ) -> std::result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error> {
-        serializer.serialize_str(&(typename::<T>().to_owned() + ":"))
+        serializer.serialize_newtype_struct(typename::<T>(), &())
+    }
+}
+
+impl<'de, T: ?Sized> Deserialize<'de> for Placeholder<T> {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_newtype_struct(
+            typename::<T>(),
+            PlaceholderVisitor {
+                phantom: PhantomData,
+            },
+        )
+    }
+}
+
+struct PlaceholderVisitor<T: ?Sized> {
+    phantom: PhantomData<T>,
+}
+
+impl<'de, T: ?Sized> Visitor<'de> for PlaceholderVisitor<T> {
+    type Value = Placeholder<T>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("placeholder")
+    }
+
+    fn visit_newtype_struct<D>(self, _deserializer: D) -> std::result::Result<Self::Value, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Placeholder {
+            phantom: PhantomData,
+        })
     }
 }

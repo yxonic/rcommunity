@@ -2,26 +2,26 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use super::{from_key, to_key, Placeholder};
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 struct User(String);
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 struct Item(String);
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 struct Index {
     user: User,
     item: Item,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 #[serde(rename = "Index")]
 struct Query {
     user: User,
     item: (),
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 #[serde(rename = "Index")]
 struct QueryItem {
     user: User,
@@ -108,4 +108,22 @@ fn test_key_deserialization() {
     assert_recoverable(&-2.34e-3_f32);
 
     assert_recoverable(&"hello".to_string());
+
+    assert_recoverable(&User("hello".to_string()));
+    assert_recoverable(&Item(String::new()));
+
+    assert_recoverable(&Placeholder::<User>::new());
+
+    assert_recoverable(&Index {
+        user: User("a".to_string()),
+        item: Item("b".to_string()),
+    });
+    assert_recoverable(&Query {
+        user: User("a".to_string()),
+        item: (),
+    });
+    assert_recoverable(&QueryItem {
+        user: User("a".to_string()),
+        item: Placeholder::new(),
+    });
 }
