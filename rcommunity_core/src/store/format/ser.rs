@@ -70,8 +70,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
 
-    fn serialize_char(self, v: char) -> Result<()> {
-        self.serialize_str(&v.to_string())
+    fn serialize_char(self, _v: char) -> Result<()> {
+        Err(Error::NotSupported)
     }
     fn serialize_str(self, v: &str) -> Result<()> {
         self.output.extend(v.as_bytes());
@@ -94,7 +94,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        Err(Error::NotSupported("unit struct".to_string()))
+        Err(Error::NotSupported)
     }
     fn serialize_unit_variant(
         self,
@@ -102,7 +102,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        Err(Error::NotSupported("unit variant".to_string()))
+        Err(Error::NotSupported)
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(

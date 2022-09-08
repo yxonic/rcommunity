@@ -3,6 +3,7 @@
 /// Se/deserialization-related errors.
 pub mod error;
 
+mod de;
 mod ser;
 
 #[cfg(test)]
@@ -10,7 +11,7 @@ mod tests;
 
 use std::marker::PhantomData;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::utils::typename;
 use error::Result;
@@ -23,6 +24,19 @@ pub fn to_key<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
     let mut serializer = ser::Serializer { output: Vec::new() };
     value.serialize(&mut serializer)?;
     Ok(serializer.output)
+}
+
+/// Deserialize key structure from bytes.
+///
+/// # Errors
+/// Will return `Err` if value cannot be deserialized properly.
+pub fn from_key<'a, T>(s: &'a [u8]) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = de::Deserializer::from_bytes(s);
+    let t = T::deserialize(&mut deserializer)?;
+    Ok(t)
 }
 
 #[derive(Debug)]

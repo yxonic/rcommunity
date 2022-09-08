@@ -8,8 +8,10 @@ pub enum Error {
     ConversionError(std::num::TryFromIntError),
     #[error("Unknown error: {0}.")]
     UnknownError(String),
-    #[error("Serializing {0} is not supported.")]
-    NotSupported(String),
+    #[error("Encountered end-of-string unexpectedly.")]
+    UnexpectedEnd,
+    #[error("Serialization not supported for type.")]
+    NotSupported,
 }
 
 impl ser::Error for Error {

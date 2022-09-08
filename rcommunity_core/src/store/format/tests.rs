@@ -1,4 +1,6 @@
-use super::{to_key, Placeholder};
+use serde::{de::DeserializeOwned, Serialize};
+
+use super::{from_key, to_key, Placeholder};
 
 #[derive(serde::Serialize)]
 struct User(String);
@@ -79,4 +81,31 @@ fn test_key_ordering() {
     assert!(to_key(&0.3).unwrap() < to_key(&0.4).unwrap());
     assert!(to_key(&0.04).unwrap() < to_key(&0.4).unwrap());
     assert!(to_key(&9e22).unwrap() < to_key(&1e23).unwrap());
+}
+
+fn assert_recoverable<T: Serialize + DeserializeOwned + PartialEq>(v: &T) {
+    let v_: T = from_key(&to_key(v).unwrap()).unwrap();
+    assert!(&v_ == v);
+}
+
+#[test]
+fn test_key_deserialization() {
+    assert_recoverable(&true);
+    assert_recoverable(&false);
+    assert_recoverable(&-3);
+    assert_recoverable(&3);
+    assert_recoverable(&1_u32);
+    assert_recoverable(&2_u8);
+    assert_recoverable(&2_i16);
+
+    assert_recoverable(&0.1);
+    assert_recoverable(&-0.15);
+    assert_recoverable(&core::f64::consts::PI);
+    assert_recoverable(&-1e-23);
+    assert_recoverable(&1e18);
+
+    assert_recoverable(&1e18_f32);
+    assert_recoverable(&-2.34e-3_f32);
+
+    assert_recoverable(&"hello".to_string());
 }
