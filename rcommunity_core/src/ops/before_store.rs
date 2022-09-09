@@ -1,14 +1,20 @@
 use async_trait::async_trait;
+use serde::Deserialize;
 
-use crate::{error::Result, store::Transaction, utils::typename};
+use crate::error::{Error, Result};
+use crate::markers::{ItemType, Once, ReactionType, UserType};
+use crate::store::format::{to_key, TypeName};
+use crate::store::Transaction;
 
-use crate::markers::Once;
-use crate::markers::{ItemType, ReactionType, UserType};
-use crate::ops::Reactor;
+use super::reaction_info::UserItemToReactionOnceKeyRef;
+use super::Reactor;
 
 #[async_trait]
 pub trait BeforeStore {
-    async fn before_store<TU: UserType, TI: ItemType>(
+    async fn before_store<
+        TU: UserType + for<'a> Deserialize<'a>,
+        TI: ItemType + for<'a> Deserialize<'a>,
+    >(
         &self,
         txn: &mut impl Transaction,
         user: &TU,
@@ -17,8 +23,11 @@ pub trait BeforeStore {
 }
 
 #[async_trait]
-impl<T: ReactionType> BeforeStore for T {
-    default async fn before_store<TU: UserType, TI: ItemType>(
+impl<T: ReactionType + for<'a> Deserialize<'a>> BeforeStore for T {
+    default async fn before_store<
+        TU: UserType + for<'a> Deserialize<'a>,
+        TI: ItemType + for<'a> Deserialize<'a>,
+    >(
         &self,
         _txn: &mut impl Transaction,
         _user: &TU,
@@ -30,16 +39,24 @@ impl<T: ReactionType> BeforeStore for T {
 }
 
 #[async_trait]
-impl<T: ReactionType + Once> BeforeStore for T {
-    async fn before_store<TU: UserType, TI: ItemType>(
+impl<T: ReactionType + Once + for<'a> Deserialize<'a>> BeforeStore for T {
+    async fn before_store<
+        TU: UserType + for<'a> Deserialize<'a>,
+        TI: ItemType + for<'a> Deserialize<'a>,
+    >(
         &self,
         txn: &mut impl Transaction,
         user: &TU,
         item: &TI,
     ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
-        let rid = txn.get(key.as_bytes()).await?;
+        let key = UserItemToReactionOnceKeyRef {
+            reaction_type: TypeName::<T>::new(),
+            user,
+            item,
+        };
+        let rid = txn
+            .get(&to_key(&key).map_err(Error::SerializationError)?)
+            .await?;
         if let Some(rid) = rid {
             let rid = String::from_utf8(rid).unwrap();
             T::dereact::<TU, TI>(txn, &rid).await?;

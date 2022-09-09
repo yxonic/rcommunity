@@ -1,10 +1,12 @@
 //! Traits to mark data as basic community types.
 
+use serde::Serialize;
+
 use crate::utils::typename;
 
-pub trait UserType: ID + Serializable + Clone + Send + Sync {}
-pub trait ItemType: ID + Serializable + Clone + Send + Sync {}
-pub trait ReactionType: Serializable + Clone + Send + Sync {}
+pub trait UserType: ID + Serialize + Serializable + Clone + Send + Sync {}
+pub trait ItemType: ID + Serialize + Serializable + Clone + Send + Sync {}
+pub trait ReactionType: Serialize + Serializable + Clone + Send + Sync {}
 
 pub trait Serializable {
     fn serialize(&self) -> String;

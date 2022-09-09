@@ -9,3 +9,5 @@ edition = "2021"
 [dependencies]
 rcommunity_core = { path = "../rcommunity_core", version = "^0.0.3" }
 rcommunity_macros = { path = "../rcommunity_macros", version = "^0.0.2" }
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.85"

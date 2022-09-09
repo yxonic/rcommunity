@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 use serde::{de::Visitor, Deserialize, Serialize};
 
 use crate::utils::typename;
-use error::Result;
+use error::{Error, Result};
 
 /// Serialize object to store key.
 ///
@@ -37,6 +37,25 @@ where
     let mut deserializer = de::Deserializer::from_bytes(s);
     let t = T::deserialize(&mut deserializer)?;
     Ok(t)
+}
+
+/// Serialize object to store value.
+///
+/// # Errors
+/// Will return `Err` if value is not serialized properly.
+pub fn to_value<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
+    serde_json::to_vec(value).map_err(Error::JsonError)
+}
+
+/// Deserialize value from bytes.
+///
+/// # Errors
+/// Will return `Err` if value cannot be deserialized properly.
+pub fn from_value<'a, T>(s: &'a [u8]) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    serde_json::from_slice(s).map_err(Error::JsonError)
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -98,6 +117,67 @@ impl<'de, T: ?Sized> Visitor<'de> for PlaceholderVisitor<T> {
         D: serde::Deserializer<'de>,
     {
         Ok(Placeholder {
+            phantom: PhantomData,
+        })
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TypeName<T: ?Sized> {
+    phantom: PhantomData<T>,
+}
+
+impl<T: ?Sized> TypeName<T> {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: ?Sized> Default for TypeName<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: ?Sized> Serialize for TypeName<T> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error> {
+        serializer.serialize_str(typename::<T>())
+    }
+}
+
+impl<'de, T: ?Sized> Deserialize<'de> for TypeName<T> {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TypeNameVisitor {
+            phantom: PhantomData,
+        })
+    }
+}
+
+struct TypeNameVisitor<T: ?Sized> {
+    phantom: PhantomData<T>,
+}
+
+impl<'de, T: ?Sized> Visitor<'de> for TypeNameVisitor<T> {
+    type Value = TypeName<T>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("typename")
+    }
+
+    fn visit_borrowed_str<E>(self, _v: &'de str) -> std::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(TypeName {
             phantom: PhantomData,
         })
     }

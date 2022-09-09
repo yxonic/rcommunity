@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::Serializable;
 use crate::{error::Result, store::Transaction, utils::typename};
 
 use crate::markers::Enumerable;
@@ -59,9 +60,9 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
         let typename = typename::<T>();
         let key = format!(
             "{typename}_{}_{}_{}_{rid}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
+            Serializable::serialize(user),
+            Serializable::serialize(item),
+            Serializable::serialize(self)
         );
         txn.put(key.as_bytes(), b"").await?;
         Ok(())
@@ -76,9 +77,9 @@ impl<T: ReactionType + Enumerable> EnumIndex for T {
         let typename = typename::<T>();
         let key = format!(
             "{typename}_{}_{}_{}_{rid}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
+            Serializable::serialize(user),
+            Serializable::serialize(item),
+            Serializable::serialize(self)
         );
         txn.delete(key.as_bytes()).await?;
         Ok(())
