@@ -3,10 +3,10 @@ use serde::Deserialize;
 
 use crate::error::{Error, Result};
 use crate::markers::{ItemType, Once, ReactionType, UserType};
-use crate::store::format::{to_key, TypeName};
+use crate::store::format::{from_value, to_key, TypeName};
 use crate::store::Transaction;
 
-use super::reaction_info::UserItemToReactionOnceKeyRef;
+use super::reaction_info::{UserItemToReactionOnceKeyRef, UserItemToReactionOnceValue};
 use super::Reactor;
 
 #[async_trait]
@@ -54,12 +54,13 @@ impl<T: ReactionType + Once + for<'a> Deserialize<'a>> BeforeStore for T {
             user,
             item,
         };
-        let rid = txn
+        let value = txn
             .get(&to_key(&key).map_err(Error::SerializationError)?)
             .await?;
-        if let Some(rid) = rid {
-            let rid = String::from_utf8(rid).unwrap();
-            T::dereact::<TU, TI>(txn, &rid).await?;
+        if let Some(v) = value {
+            let v =
+                from_value::<UserItemToReactionOnceValue>(&v).map_err(Error::SerializationError)?;
+            T::dereact::<TU, TI>(txn, &v.rid).await?;
         }
         Ok(())
     }

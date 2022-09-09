@@ -55,6 +55,14 @@ where
 }
 
 #[derive(Serialize)]
+pub(crate) struct UserItemToReactionValueRef<'a, TR>
+where
+    TR: ReactionType,
+{
+    pub reaction: &'a TR,
+}
+
+#[derive(Serialize)]
 #[serde(rename = "UserItemToReactionOnceKey")]
 pub struct UserItemToReactionOnceKeyRef<'a, TU, TI, TR>
 where
@@ -68,11 +76,13 @@ where
 }
 
 #[derive(Serialize)]
-pub(crate) struct UserItemToReactionValueRef<'a, TR>
-where
-    TR: ReactionType,
-{
-    pub reaction: &'a TR,
+pub(crate) struct UserItemToReactionOnceValueRef<'a> {
+    pub rid: &'a str,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct UserItemToReactionOnceValue {
+    pub rid: String,
 }
 
 /// Ability to manage and query reaction basic information.
@@ -219,7 +229,7 @@ impl<T: ReactionType + Serialize + for<'a> Deserialize<'a> + Once> ReactionInfo 
             user,
             item,
         };
-        let value = UserItemToReactionValueRef { reaction: self };
+        let value = UserItemToReactionOnceValueRef { rid };
         txn.put(
             &to_key(&key).map_err(Error::SerializationError)?,
             &to_value(&value).map_err(Error::SerializationError)?,
@@ -249,5 +259,39 @@ impl<T: ReactionType + Serialize + for<'a> Deserialize<'a> + Once> ReactionInfo 
         txn.delete(&to_key(&key).map_err(Error::SerializationError)?)
             .await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+pub trait ReactionInfoOnce: ReactionType {
+    async fn get_rid<TU: UserType, TI: ItemType>(
+        txn: &mut impl Transaction,
+        user: &TU,
+        item: &TI,
+    ) -> Result<String>;
+}
+
+#[async_trait]
+impl<T: ReactionType + Once> ReactionInfoOnce for T {
+    async fn get_rid<TU: UserType, TI: ItemType>(
+        txn: &mut impl Transaction,
+        user: &TU,
+        item: &TI,
+    ) -> Result<String> {
+        let key = UserItemToReactionOnceKeyRef {
+            reaction_type: TypeName::<T>::new(),
+            user,
+            item,
+        };
+        let value = txn
+            .get(&to_key(&key).map_err(Error::SerializationError)?)
+            .await?;
+        if let Some(v) = value {
+            let v: UserItemToReactionOnceValue =
+                from_value(&v).map_err(Error::SerializationError)?;
+            Ok(v.rid)
+        } else {
+            Err(Error::UnknownError("TODO: change to not found".into()))
+        }
     }
 }

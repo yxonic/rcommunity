@@ -16,7 +16,7 @@ mod tests;
 
 pub use before_store::BeforeStore;
 pub use enum_index::EnumIndex;
-pub use reaction_info::ReactionInfo;
+pub use reaction_info::{ReactionInfo, ReactionInfoOnce};
 pub use unique_index::UniqueIndex;
 
 #[async_trait]

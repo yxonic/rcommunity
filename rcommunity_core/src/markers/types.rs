@@ -14,7 +14,7 @@ pub trait Serializable {
 }
 
 pub trait ID {
-    fn id(&self) -> &str;
+    fn id(&self) -> String;
     fn from(id: &str) -> Self;
 }
 
