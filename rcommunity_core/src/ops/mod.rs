@@ -10,9 +10,9 @@ use crate::{
 };
 
 mod before_store;
-mod enum_index;
 mod reaction_info;
 mod unique_index;
+mod enum_index;
 
 #[cfg(test)]
 mod tests;

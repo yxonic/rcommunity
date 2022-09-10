@@ -1,3 +1,5 @@
+//! Se/deserialization-related errors.
+
 use serde::{de, ser};
 use std::fmt::Display;
 use thiserror::Error;

@@ -1,19 +1,16 @@
 //! Store format types to help enforce consistent data se/desrialization.
 
-/// Se/deserialization-related errors.
 pub mod error;
-
-mod de;
 mod ser;
+mod de;
 
 #[cfg(test)]
 mod tests;
 
-use std::marker::PhantomData;
+use std::{any::type_name, marker::PhantomData};
 
 use serde::{de::Visitor, Deserialize, Serialize};
 
-use crate::utils::typename;
 use error::{Error, Result};
 
 /// Serialize object to store key.
@@ -181,4 +178,9 @@ impl<'de, T: ?Sized> Visitor<'de> for TypeNameVisitor<T> {
             phantom: PhantomData,
         })
     }
+}
+
+fn typename<T: ?Sized>() -> &'static str {
+    let full_type_name = type_name::<T>();
+    full_type_name.split("::").last().unwrap_or(full_type_name)
 }
