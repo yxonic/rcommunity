@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 
 use crate::{
     error::Result,
@@ -28,9 +28,9 @@ pub struct UserItemUnboundedReactionClient<
 impl<
         'store,
         TS: Store,
-        TU: UserType + for<'a> Deserialize<'a>,
-        TI: ItemType + for<'a> Deserialize<'a>,
-        TR: ReactionType + for<'a> Deserialize<'a>,
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+        TR: ReactionType + DeserializeOwned,
     > UserItemUnboundedReactionClient<'store, TS, TU, TI, TR>
 {
     /// Create a new reaction.

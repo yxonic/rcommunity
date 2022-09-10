@@ -3,8 +3,11 @@
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 
-use crate::markers::{ItemType, ReactionType, UserType};
-use crate::{error::Result, store::Transaction};
+use crate::{
+    error::Result,
+    markers::{ItemType, ReactionType, UserType},
+    store::Transaction,
+};
 
 mod before_store;
 mod enum_index;

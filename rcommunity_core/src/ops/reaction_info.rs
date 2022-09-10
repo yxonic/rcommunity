@@ -1,10 +1,14 @@
 use async_trait::async_trait;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::error::{Error, Result};
-use crate::markers::{ItemType, Once, ReactionType, UserType};
-use crate::store::format::{from_value, to_key, to_value, TypeName};
-use crate::store::Transaction;
+use crate::{
+    error::{Error, Result},
+    markers::{ItemType, Once, ReactionType, UserType},
+    store::{
+        format::{from_value, to_key, to_value, TypeName},
+        Transaction,
+    },
+};
 
 #[derive(Serialize)]
 #[serde(rename = "ReactionInfoKey")]
@@ -113,8 +117,8 @@ pub trait ReactionInfo: ReactionType {
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
 ///
-/// Under the hood, this implementor manages **reaction ID** to **user-item-reaction triplet**
-/// mapping for all reaction types.
+/// Under the hood, this implementor manages **reaction ID** to
+/// **user-item-reaction triplet** mapping for all reaction types.
 #[async_trait]
 impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
     default async fn store_reaction(
@@ -197,10 +201,12 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
     }
 }
 
-/// Specialized [`ReactionInfo`] implementor for reaction types that are marked as [`Once`].
+/// Specialized [`ReactionInfo`] implementor for reaction types that are marked
+/// as [`Once`].
 ///
-/// Under the hood, this implementor manages **reaction ID** to **user-item pair** mapping for
-/// reaction types that react at most once for each user-item pair.
+/// Under the hood, this implementor manages **reaction ID** to **user-item
+/// pair** mapping for reaction types that react at most once for each user-item
+/// pair.
 #[async_trait]
 impl<T: ReactionType + DeserializeOwned + Once> ReactionInfo for T {
     async fn store_reaction(

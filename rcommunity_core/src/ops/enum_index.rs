@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 
-use crate::{error::Result, store::Transaction};
-
-use crate::markers::Enumerable;
-use crate::markers::{ItemType, ReactionType, UserType};
+use crate::{
+    error::Result,
+    markers::{Enumerable, ItemType, ReactionType, UserType},
+    store::Transaction,
+};
 
 #[async_trait]
 pub trait EnumIndex {

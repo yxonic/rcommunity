@@ -29,10 +29,10 @@ type ByteMap = BTreeMap<Vec<u8>, Vec<u8>>;
 
 /// Implementation of an in-memory [`Store`].
 ///
-/// Internally, each operation of `MemoryStore` first obtains a transaction lock, then locks the
-/// mutex protecting the underlying store. The transaction lock is implemented as a [`Condvar`],
-/// checking whether it is currently in the same transaction (or no transaction at all) before
-/// entering.
+/// Internally, each operation of `MemoryStore` first obtains a transaction
+/// lock, then locks the mutex protecting the underlying store. The transaction
+/// lock is implemented as a [`Condvar`], checking whether it is currently in
+/// the same transaction (or no transaction at all) before entering.
 #[derive(Debug, Default)]
 pub struct MemoryStore {
     store: Arc<Mutex<ByteMap>>,

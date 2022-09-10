@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ops::Reactor;
-use crate::store::memory::MemoryStore;
-use crate::store::Store;
-use crate::{ItemType, Once, ReactionType, UserType, ID};
+use crate::{
+    ops::Reactor,
+    store::{memory::MemoryStore, Store},
+    ItemType, Once, ReactionType, UserType, ID,
+};
 
 use super::{ReactionInfo, ReactionInfoOnce};
 

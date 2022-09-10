@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 
-use crate::error::Result;
-use crate::markers::{ItemType, Once, ReactionType, UserType};
-use crate::store::Transaction;
+use crate::{
+    error::Result,
+    markers::{ItemType, Once, ReactionType, UserType},
+    store::Transaction,
+};
 
-use super::reaction_info::ReactionInfoOnce;
-use super::Reactor;
+use super::{reaction_info::ReactionInfoOnce, Reactor};
 
 #[async_trait]
 pub trait BeforeStore {
