@@ -1,7 +1,7 @@
 //! Traits for supporting all the internal operations.
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 
 use crate::markers::{ItemType, ReactionType, UserType};
 use crate::{error::Result, store::Transaction};
@@ -25,26 +25,23 @@ pub trait Reactor {
         &self,
         txn: &mut impl Transaction,
         rid: &str,
-        user: &(impl UserType + for<'a> Deserialize<'a>),
-        item: &(impl ItemType + for<'a> Deserialize<'a>),
+        user: &(impl UserType + DeserializeOwned),
+        item: &(impl ItemType + DeserializeOwned),
     ) -> Result<()>;
-    async fn dereact<
-        TU: UserType + for<'a> Deserialize<'a>,
-        TI: ItemType + for<'a> Deserialize<'a>,
-    >(
+    async fn dereact<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
         txn: &mut impl Transaction,
         rid: &str,
     ) -> Result<()>;
 }
 
 #[async_trait]
-impl<T: ReactionType + Serialize + for<'a> Deserialize<'a>> Reactor for T {
+impl<T: ReactionType + DeserializeOwned> Reactor for T {
     async fn react(
         &self,
         txn: &mut impl Transaction,
         rid: &str,
-        user: &(impl UserType + for<'a> Deserialize<'a>),
-        item: &(impl ItemType + for<'a> Deserialize<'a>),
+        user: &(impl UserType + DeserializeOwned),
+        item: &(impl ItemType + DeserializeOwned),
     ) -> Result<()> {
         self.before_store(txn, user, item).await?;
         self.store_reaction(txn, rid, user, item).await?;
@@ -52,10 +49,7 @@ impl<T: ReactionType + Serialize + for<'a> Deserialize<'a>> Reactor for T {
         self.store_enum_index(txn, rid, user, item).await?;
         Ok(())
     }
-    async fn dereact<
-        TU: UserType + for<'a> Deserialize<'a>,
-        TI: ItemType + for<'a> Deserialize<'a>,
-    >(
+    async fn dereact<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
         txn: &mut impl Transaction,
         rid: &str,
     ) -> Result<()> {

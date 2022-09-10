@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::markers::{ItemType, Once, ReactionType, UserType};
@@ -17,6 +17,7 @@ where
 }
 
 #[derive(Serialize)]
+#[serde(rename = "ReactionInfoValue")]
 pub struct ReactionInfoValueRef<'a, TU, TI, TR>
 where
     TU: UserType,
@@ -55,6 +56,7 @@ where
 }
 
 #[derive(Serialize)]
+#[serde(rename = "UserItemToReactionValue")]
 pub(crate) struct UserItemToReactionValueRef<'a, TR>
 where
     TR: ReactionType,
@@ -76,6 +78,7 @@ where
 }
 
 #[derive(Serialize)]
+#[serde(rename = "UserItemToReactionOnceValue")]
 pub(crate) struct UserItemToReactionOnceValueRef<'a> {
     pub rid: &'a str,
 }
@@ -102,10 +105,7 @@ pub trait ReactionInfo: ReactionType {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
-    async fn get_reaction_by_id<
-        TU: UserType + for<'a> Deserialize<'a>,
-        TI: ItemType + for<'a> Deserialize<'a>,
-    >(
+    async fn get_reaction_by_id<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
         txn: &mut impl Transaction,
         rid: &str,
     ) -> Result<ReactionInfoValue<TU, TI, Self>>;
@@ -116,7 +116,7 @@ pub trait ReactionInfo: ReactionType {
 /// Under the hood, this implementor manages **reaction ID** to **user-item-reaction triplet**
 /// mapping for all reaction types.
 #[async_trait]
-impl<T: ReactionType + Serialize + for<'a> Deserialize<'a>> ReactionInfo for T {
+impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
     default async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
@@ -177,8 +177,8 @@ impl<T: ReactionType + Serialize + for<'a> Deserialize<'a>> ReactionInfo for T {
         Ok(())
     }
     default async fn get_reaction_by_id<
-        TU: UserType + for<'a> Deserialize<'a>,
-        TI: ItemType + for<'a> Deserialize<'a>,
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
     >(
         txn: &mut impl Transaction,
         rid: &str,
@@ -202,7 +202,7 @@ impl<T: ReactionType + Serialize + for<'a> Deserialize<'a>> ReactionInfo for T {
 /// Under the hood, this implementor manages **reaction ID** to **user-item pair** mapping for
 /// reaction types that react at most once for each user-item pair.
 #[async_trait]
-impl<T: ReactionType + Serialize + for<'a> Deserialize<'a> + Once> ReactionInfo for T {
+impl<T: ReactionType + DeserializeOwned + Once> ReactionInfo for T {
     async fn store_reaction(
         &self,
         txn: &mut impl Transaction,
