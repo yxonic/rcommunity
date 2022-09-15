@@ -20,6 +20,8 @@ pub trait Store {
 /// [`Store`].
 #[async_trait]
 pub trait Transaction: Send + Sync {
+    type PairIterator: Iterator<Item = (Vec<u8>, Vec<u8>)>;
+    type KeyIterator: Iterator<Item = Vec<u8>>;
     /// Get the value of a key from store.
     async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     /// Get the value of a key from store, while blocking reads/writes from
@@ -30,19 +32,9 @@ pub trait Transaction: Send + Sync {
     /// Deletes the given key and its value from store.
     async fn delete(&mut self, key: &[u8]) -> Result<()>;
     /// Scan for key-value pairs within a key range from store.
-    async fn scan(
-        &self,
-        start: &[u8],
-        end: &[u8],
-        limit: usize,
-    ) -> Result<Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>>;
+    async fn scan(&self, start: &[u8], end: &[u8], limit: usize) -> Result<Self::PairIterator>;
     /// Scan for all keys within a key range from store.
-    async fn scan_keys(
-        &self,
-        start: &[u8],
-        end: &[u8],
-        limit: usize,
-    ) -> Result<Box<dyn Iterator<Item = Vec<u8>>>>;
+    async fn scan_keys(&self, start: &[u8], end: &[u8], limit: usize) -> Result<Self::KeyIterator>;
     /// Commit this transaction.
     async fn commit(&mut self) -> Result<()>;
     /// Rollback this transaction. Implementation of this method is not

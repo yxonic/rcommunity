@@ -17,9 +17,10 @@
 //! })
 //! ```
 
+use std::{collections::BTreeMap, sync::Arc};
+
 use async_trait::async_trait;
 use parking_lot::{Condvar, Mutex, MutexGuard};
-use std::{collections::BTreeMap, sync::Arc};
 
 use crate::error::Result;
 
@@ -81,6 +82,9 @@ impl MemoryTransaction {
 
 #[async_trait]
 impl Transaction for MemoryTransaction {
+    type KeyIterator = std::vec::IntoIter<Vec<u8>>;
+    type PairIterator = std::vec::IntoIter<(Vec<u8>, Vec<u8>)>;
+
     async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>> {
         let (cur_txn_id, cvar) = self.txn_lock();
         let value = self.store.lock().get(key).cloned();
@@ -105,12 +109,7 @@ impl Transaction for MemoryTransaction {
         Ok(())
     }
 
-    async fn scan(
-        &self,
-        start: &[u8],
-        end: &[u8],
-        limit: usize,
-    ) -> Result<Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>> {
+    async fn scan(&self, start: &[u8], end: &[u8], limit: usize) -> Result<Self::PairIterator> {
         let (cur_txn_id, cvar) = self.txn_lock();
         // needs collect here to pass across async boundary
         #[allow(clippy::needless_collect)]
@@ -124,15 +123,10 @@ impl Transaction for MemoryTransaction {
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
-        Ok(Box::new(value.into_iter()))
+        Ok(value.into_iter())
     }
 
-    async fn scan_keys(
-        &self,
-        start: &[u8],
-        end: &[u8],
-        limit: usize,
-    ) -> Result<Box<dyn Iterator<Item = Vec<u8>>>> {
+    async fn scan_keys(&self, start: &[u8], end: &[u8], limit: usize) -> Result<Self::KeyIterator> {
         let (cur_txn_id, cvar) = self.txn_lock();
         // needs collect here to pass across async boundary
         #[allow(clippy::needless_collect)]
@@ -146,7 +140,7 @@ impl Transaction for MemoryTransaction {
         if *cur_txn_id == 0 {
             cvar.notify_one();
         }
-        Ok(Box::new(value.into_iter()))
+        Ok(value.into_iter())
     }
 
     async fn delete(&mut self, key: &[u8]) -> Result<()> {
