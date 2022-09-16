@@ -1,3 +1,5 @@
+//! Se/deserialization-related errors.
+
 use serde::{de, ser};
 use std::fmt::Display;
 use thiserror::Error;
@@ -12,6 +14,8 @@ pub enum Error {
     UnexpectedEnd,
     #[error("Serialization not supported for type.")]
     NotSupported,
+    #[error("serde_json error: {0}.")]
+    JsonError(serde_json::Error),
 }
 
 impl ser::Error for Error {

@@ -9,12 +9,11 @@
 #![allow(incomplete_features)]
 #![feature(specialization)]
 
-pub mod client;
 pub mod error;
+pub mod store;
 pub mod markers;
 pub mod ops;
-pub mod store;
-pub mod utils;
+pub mod client;
 
 // Re-export all traits.
 pub use markers::*;

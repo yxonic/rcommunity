@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 
-use crate::{error::Result, store::Transaction, utils::typename};
+use crate::{error::Result, store::Transaction};
 
-use crate::markers::ID;
-use crate::markers::{ItemType, ReactionType, UserType};
+use crate::markers::{ItemType, ReactionType, UserType, ID};
 
 #[async_trait]
 pub trait UniqueIndex {
@@ -51,36 +50,37 @@ impl<T: ReactionType> UniqueIndex for T {
 impl<T: ReactionType + ID> UniqueIndex for T {
     async fn store_unique_index(
         &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!(
-            "u_{typename}_{}_{}_{}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
-        );
-        txn.put(key.as_bytes(), rid.as_bytes()).await?;
-        Ok(())
-    }
-    async fn discard_unique_index(
-        &self,
-        txn: &mut impl Transaction,
+        _txn: &mut impl Transaction,
         _rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
+        _user: &impl UserType,
+        _item: &impl ItemType,
     ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!(
-            "u_{typename}_{}_{}_{}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
-        );
-        txn.delete(key.as_bytes()).await?;
-        Ok(())
+        //     let typename = typename::<T>();
+        //     let key = format!(
+        //         "u_{typename}_{}_{}_{}",
+        //         Serializable::serialize(user),
+        //         Serializable::serialize(item),
+        //         Serializable::serialize(self)
+        //     );
+        //     txn.put(key.as_bytes(), rid.as_bytes()).await?;
+        //     Ok(())
+        // }
+        // async fn discard_unique_index(
+        //     &self,
+        //     txn: &mut impl Transaction,
+        //     _rid: &str,
+        //     user: &impl UserType,
+        //     item: &impl ItemType,
+        // ) -> Result<()> {
+        //     let typename = typename::<T>();
+        //     let key = format!(
+        //         "u_{typename}_{}_{}_{}",
+        //         Serializable::serialize(user),
+        //         Serializable::serialize(item),
+        //         Serializable::serialize(self)
+        //     );
+        //     txn.delete(key.as_bytes()).await?;
+        //     Ok(())
+        todo!()
     }
 }

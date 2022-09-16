@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 
-use crate::{error::Result, store::Transaction, utils::typename};
-
-use crate::markers::Enumerable;
-use crate::markers::{ItemType, ReactionType, UserType};
+use crate::{
+    error::Result,
+    markers::{Enumerable, ItemType, ReactionType, UserType},
+    store::Transaction,
+};
 
 #[async_trait]
 pub trait EnumIndex {
@@ -51,36 +52,37 @@ impl<T: ReactionType> EnumIndex for T {
 impl<T: ReactionType + Enumerable> EnumIndex for T {
     async fn store_enum_index(
         &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
+        _txn: &mut impl Transaction,
+        _rid: &str,
+        _user: &impl UserType,
+        _item: &impl ItemType,
     ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!(
-            "{typename}_{}_{}_{}_{rid}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
-        );
-        txn.put(key.as_bytes(), b"").await?;
-        Ok(())
-    }
-    async fn discard_enum_index(
-        &self,
-        txn: &mut impl Transaction,
-        rid: &str,
-        user: &impl UserType,
-        item: &impl ItemType,
-    ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!(
-            "{typename}_{}_{}_{}_{rid}",
-            user.serialize(),
-            item.serialize(),
-            self.serialize()
-        );
-        txn.delete(key.as_bytes()).await?;
-        Ok(())
+        //     let typename = typename::<T>();
+        //     let key = format!(
+        //         "{typename}_{}_{}_{}_{rid}",
+        //         Serializable::serialize(user),
+        //         Serializable::serialize(item),
+        //         Serializable::serialize(self)
+        //     );
+        //     txn.put(key.as_bytes(), b"").await?;
+        //     Ok(())
+        // }
+        // async fn discard_enum_index(
+        //     &self,
+        //     txn: &mut impl Transaction,
+        //     rid: &str,
+        //     user: &impl UserType,
+        //     item: &impl ItemType,
+        // ) -> Result<()> {
+        //     let typename = typename::<T>();
+        //     let key = format!(
+        //         "{typename}_{}_{}_{}_{rid}",
+        //         Serializable::serialize(user),
+        //         Serializable::serialize(item),
+        //         Serializable::serialize(self)
+        //     );
+        //     txn.delete(key.as_bytes()).await?;
+        //     Ok(())
+        todo!()
     }
 }

@@ -1,7 +1,7 @@
 //! Marker traits for building custom type-safe APIs.
 
-mod properties;
 mod types;
+mod properties;
 
 pub use properties::*;
 pub use types::*;

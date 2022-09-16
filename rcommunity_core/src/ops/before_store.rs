@@ -1,14 +1,17 @@
 use async_trait::async_trait;
+use serde::de::DeserializeOwned;
 
-use crate::{error::Result, store::Transaction, utils::typename};
+use crate::{
+    error::Result,
+    markers::{ItemType, Once, ReactionType, UserType},
+    store::Transaction,
+};
 
-use crate::markers::Once;
-use crate::markers::{ItemType, ReactionType, UserType};
-use crate::ops::Reactor;
+use super::{reaction_info::ReactionInfoOnce, Reactor};
 
 #[async_trait]
 pub trait BeforeStore {
-    async fn before_store<TU: UserType, TI: ItemType>(
+    async fn before_store<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
         &self,
         txn: &mut impl Transaction,
         user: &TU,
@@ -17,8 +20,11 @@ pub trait BeforeStore {
 }
 
 #[async_trait]
-impl<T: ReactionType> BeforeStore for T {
-    default async fn before_store<TU: UserType, TI: ItemType>(
+impl<T: ReactionType + DeserializeOwned> BeforeStore for T {
+    default async fn before_store<
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+    >(
         &self,
         _txn: &mut impl Transaction,
         _user: &TU,
@@ -30,19 +36,16 @@ impl<T: ReactionType> BeforeStore for T {
 }
 
 #[async_trait]
-impl<T: ReactionType + Once> BeforeStore for T {
-    async fn before_store<TU: UserType, TI: ItemType>(
+impl<T: ReactionType + DeserializeOwned + Once> BeforeStore for T {
+    async fn before_store<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
         &self,
         txn: &mut impl Transaction,
         user: &TU,
         item: &TI,
     ) -> Result<()> {
-        let typename = typename::<T>();
-        let key = format!("{typename}_{}_{}", user.serialize(), item.serialize());
-        let rid = txn.get(key.as_bytes()).await?;
-        if let Some(rid) = rid {
-            let rid = String::from_utf8(rid).unwrap();
-            T::dereact::<TU, TI>(txn, &rid).await?;
+        let rid = T::get_rid(txn, user, item).await;
+        if let Ok(r) = &rid {
+            T::dereact::<TU, TI>(txn, r).await?;
         }
         Ok(())
     }

@@ -15,14 +15,7 @@ fn derive_id(input: TokenStream) -> TokenStream {
 
     let name = &ast.ident;
     let gen = quote! {
-        impl ::rcommunity_core::ID for #name {
-            fn id(&self) -> &str {
-                &self.0
-            }
-            fn from(id: &str) -> Self {
-                #name(id.into())
-            }
-        }
+        impl ::rcommunity_core::ID for #name {}
     };
     gen
 }
