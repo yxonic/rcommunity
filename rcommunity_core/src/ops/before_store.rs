@@ -21,15 +21,16 @@ pub trait BeforeStore {
 
 #[async_trait]
 impl<T: ReactionType + DeserializeOwned> BeforeStore for T {
-    default async fn before_store<
-        TU: UserType + DeserializeOwned,
-        TI: ItemType + DeserializeOwned,
-    >(
+    default async fn before_store<TU, TI>(
         &self,
         _txn: &mut impl Transaction,
         _user: &TU,
         _item: &TI,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+    {
         // by default do nothing
         Ok(())
     }
@@ -37,12 +38,16 @@ impl<T: ReactionType + DeserializeOwned> BeforeStore for T {
 
 #[async_trait]
 impl<T: ReactionType + DeserializeOwned + Once> BeforeStore for T {
-    async fn before_store<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
+    async fn before_store<TU, TI>(
         &self,
         txn: &mut impl Transaction,
         user: &TU,
         item: &TI,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+    {
         let rid = T::get_rid(txn, user, item).await;
         if let Ok(r) = &rid {
             T::dereact::<TU, TI>(txn, r).await?;

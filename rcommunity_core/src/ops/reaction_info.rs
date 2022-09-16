@@ -109,10 +109,13 @@ pub trait ReactionInfo: ReactionType {
         user: &impl UserType,
         item: &impl ItemType,
     ) -> Result<()>;
-    async fn get_reaction_by_id<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
+    async fn get_reaction_by_id<TU, TI>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<ReactionInfoValue<TU, TI, Self>>;
+    ) -> Result<ReactionInfoValue<TU, TI, Self>>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned;
 }
 
 /// Default [`ReactionInfo`] implementor for all reaction types.
@@ -180,13 +183,14 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             .await?;
         Ok(())
     }
-    default async fn get_reaction_by_id<
-        TU: UserType + DeserializeOwned,
-        TI: ItemType + DeserializeOwned,
-    >(
+    default async fn get_reaction_by_id<TU, TI>(
         txn: &mut impl Transaction,
         rid: &str,
-    ) -> Result<ReactionInfoValue<TU, TI, T>> {
+    ) -> Result<ReactionInfoValue<TU, TI, T>>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+    {
         let key = ReactionInfoKeyRef {
             reaction_type: TypeName::<T>::new(),
             rid,
@@ -270,20 +274,19 @@ impl<T: ReactionType + DeserializeOwned + Once> ReactionInfo for T {
 
 #[async_trait]
 pub trait ReactionInfoOnce: ReactionType {
-    async fn get_rid<TU: UserType, TI: ItemType>(
-        txn: &mut impl Transaction,
-        user: &TU,
-        item: &TI,
-    ) -> Result<String>;
+    async fn get_rid<TU, TI>(txn: &mut impl Transaction, user: &TU, item: &TI) -> Result<String>
+    where
+        TU: UserType,
+        TI: ItemType;
 }
 
 #[async_trait]
 impl<T: ReactionType + Once> ReactionInfoOnce for T {
-    async fn get_rid<TU: UserType, TI: ItemType>(
-        txn: &mut impl Transaction,
-        user: &TU,
-        item: &TI,
-    ) -> Result<String> {
+    async fn get_rid<TU, TI>(txn: &mut impl Transaction, user: &TU, item: &TI) -> Result<String>
+    where
+        TU: UserType,
+        TI: ItemType,
+    {
         let key = UserItemToReactionOnceKeyRef {
             reaction_type: TypeName::<T>::new(),
             user,

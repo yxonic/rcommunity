@@ -31,10 +31,10 @@ pub trait Reactor {
         user: &(impl UserType + DeserializeOwned),
         item: &(impl ItemType + DeserializeOwned),
     ) -> Result<()>;
-    async fn dereact<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
-        txn: &mut impl Transaction,
-        rid: &str,
-    ) -> Result<()>;
+    async fn dereact<TU, TI>(txn: &mut impl Transaction, rid: &str) -> Result<()>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned;
 }
 
 #[async_trait]
@@ -52,10 +52,11 @@ impl<T: ReactionType + DeserializeOwned> Reactor for T {
         self.store_enum_index(txn, rid, user, item).await?;
         Ok(())
     }
-    async fn dereact<TU: UserType + DeserializeOwned, TI: ItemType + DeserializeOwned>(
-        txn: &mut impl Transaction,
-        rid: &str,
-    ) -> Result<()> {
+    async fn dereact<TU, TI>(txn: &mut impl Transaction, rid: &str) -> Result<()>
+    where
+        TU: UserType + DeserializeOwned,
+        TI: ItemType + DeserializeOwned,
+    {
         let r = T::get_reaction_by_id::<TU, TI>(txn, rid).await?;
         let user = r.user;
         let item = r.item;
