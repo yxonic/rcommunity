@@ -174,53 +174,49 @@ mod test {
     #[tokio::test]
     async fn test_memory_store() {
         let mut store = MemoryStore::default();
-        {
-            let mut txn = store.begin_txn().await.unwrap();
-            assert!(txn.get(b"key").await.unwrap().is_none());
-            txn.put(b"key", b"value").await.unwrap();
-            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"value");
-        }
-        {
-            let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(txn.get_for_update(b"key").await.unwrap().unwrap(), b"value");
-            txn.put(b"key", b"").await.unwrap();
-            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
-            txn.commit().await.unwrap();
-        }
-        {
-            let mut txn = store.begin_txn().await.unwrap();
-            txn.put(b"key2", b"v2").await.unwrap();
-            assert!(
-                txn.scan(b"key", b"key3", 10)
-                    .await
-                    .unwrap()
-                    .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
-                    == vec![
-                        (b"key".to_vec(), b"".to_vec()),
-                        (b"key2".to_vec(), b"v2".to_vec())
-                    ]
-            );
-            assert!(
-                txn.scan(b"key", b"key3", 1)
-                    .await
-                    .unwrap()
-                    .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
-                    == vec![(b"key".to_vec(), b"".to_vec())]
-            );
-            txn.put(b"key4", b"v4").await.unwrap();
-            assert!(
-                txn.scan_keys(b"key", b"key3", 10)
-                    .await
-                    .unwrap()
-                    .collect::<Vec<Vec<u8>>>()
-                    == vec![b"key".to_vec(), b"key2".to_vec()]
-            );
-        }
-        {
-            let mut txn = store.begin_txn().await.unwrap();
-            assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
-            txn.delete(b"key").await.unwrap();
-            assert!(txn.get(b"key").await.unwrap().is_none());
-        }
+
+        let mut txn = store.begin_txn().await.unwrap();
+        assert!(txn.get(b"key").await.unwrap().is_none());
+        txn.put(b"key", b"value").await.unwrap();
+        assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"value");
+
+        let mut txn = store.begin_txn().await.unwrap();
+        assert_eq!(txn.get_for_update(b"key").await.unwrap().unwrap(), b"value");
+        txn.put(b"key", b"").await.unwrap();
+        assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
+        txn.commit().await.unwrap();
+
+        let mut txn = store.begin_txn().await.unwrap();
+        txn.put(b"key2", b"v2").await.unwrap();
+        assert!(
+            txn.scan(b"key", b"key3", 10)
+                .await
+                .unwrap()
+                .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
+                == vec![
+                    (b"key".to_vec(), b"".to_vec()),
+                    (b"key2".to_vec(), b"v2".to_vec())
+                ]
+        );
+        assert!(
+            txn.scan(b"key", b"key3", 1)
+                .await
+                .unwrap()
+                .collect::<Vec<(Vec<u8>, Vec<u8>)>>()
+                == vec![(b"key".to_vec(), b"".to_vec())]
+        );
+        txn.put(b"key4", b"v4").await.unwrap();
+        assert!(
+            txn.scan_keys(b"key", b"key3", 10)
+                .await
+                .unwrap()
+                .collect::<Vec<Vec<u8>>>()
+                == vec![b"key".to_vec(), b"key2".to_vec()]
+        );
+
+        let mut txn = store.begin_txn().await.unwrap();
+        assert_eq!(txn.get(b"key").await.unwrap().unwrap(), b"");
+        txn.delete(b"key").await.unwrap();
+        assert!(txn.get(b"key").await.unwrap().is_none());
     }
 }
