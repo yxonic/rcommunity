@@ -11,7 +11,7 @@ use std::{any::type_name, marker::PhantomData};
 
 use serde::{de::Visitor, Deserialize, Serialize};
 
-use error::{Error, Result};
+use error::Result;
 
 /// Serialize object to store key.
 ///
@@ -41,7 +41,7 @@ where
 /// # Errors
 /// Will return `Err` if value is not serialized properly.
 pub fn to_value<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
-    serde_json::to_vec(value).map_err(Error::JsonError)
+    Ok(serde_json::to_vec(value)?)
 }
 
 /// Deserialize value from bytes.
@@ -52,7 +52,7 @@ pub fn from_value<'a, T>(s: &'a [u8]) -> Result<T>
 where
     T: Deserialize<'a>,
 {
-    serde_json::from_slice(s).map_err(Error::JsonError)
+    Ok(serde_json::from_slice(s)?)
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -56,7 +56,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_i64(v.into())
     }
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.serialize_i64(v.try_into().map_err(Error::ConversionError)?)
+        self.serialize_i64(v.try_into()?)
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {

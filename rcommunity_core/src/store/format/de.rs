@@ -86,33 +86,21 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i8(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_i8(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i16(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_i16(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i32(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_i32(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
@@ -126,44 +114,28 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u8(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_u8(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u16(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_u16(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u32(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_u32(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u64(
-            self.parse_signed()?
-                .try_into()
-                .map_err(Error::ConversionError)?,
-        )
+        visitor.visit_u64(self.parse_signed()?.try_into()?)
     }
 
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>

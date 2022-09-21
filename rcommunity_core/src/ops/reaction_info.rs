@@ -140,11 +140,7 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             item,
             reaction: self,
         };
-        txn.put(
-            &to_key(&key).map_err(Error::SerializationError)?,
-            &to_value(&value).map_err(Error::SerializationError)?,
-        )
-        .await?;
+        txn.put(&to_key(&key)?, &to_value(&value)?).await?;
         let key = UserItemToReactionKeyRef {
             reaction_type: TypeName::<T>::new(),
             user,
@@ -152,11 +148,7 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             rid,
         };
         let value = UserItemToReactionValueRef { reaction: self };
-        txn.put(
-            &to_key(&key).map_err(Error::SerializationError)?,
-            &to_value(&value).map_err(Error::SerializationError)?,
-        )
-        .await?;
+        txn.put(&to_key(&key)?, &to_value(&value)?).await?;
         Ok(())
     }
     default async fn discard_reaction(
@@ -170,8 +162,7 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             reaction_type: TypeName::<T>::new(),
             rid,
         };
-        txn.delete(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        txn.delete(&to_key(&key)?).await?;
 
         let key = UserItemToReactionKeyRef {
             reaction_type: TypeName::<T>::new(),
@@ -179,8 +170,7 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             item,
             rid,
         };
-        txn.delete(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        txn.delete(&to_key(&key)?).await?;
         Ok(())
     }
     default async fn get_reaction_by_id<TU, TI>(
@@ -195,11 +185,9 @@ impl<T: ReactionType + DeserializeOwned> ReactionInfo for T {
             reaction_type: TypeName::<T>::new(),
             rid,
         };
-        let value = txn
-            .get(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        let value = txn.get(&to_key(&key)?).await?;
         if let Some(v) = value {
-            return from_value(&v).map_err(Error::SerializationError);
+            return Ok(from_value(&v)?);
         }
         Err(Error::UnknownError("TODO: change to not found".into()))
     }
@@ -229,22 +217,14 @@ impl<T: ReactionType + DeserializeOwned + Once> ReactionInfo for T {
             item,
             reaction: self,
         };
-        txn.put(
-            &to_key(&key).map_err(Error::SerializationError)?,
-            &to_value(&value).map_err(Error::SerializationError)?,
-        )
-        .await?;
+        txn.put(&to_key(&key)?, &to_value(&value)?).await?;
         let key = UserItemToReactionOnceKeyRef {
             reaction_type: TypeName::<T>::new(),
             user,
             item,
         };
         let value = UserItemToReactionOnceValueRef { rid };
-        txn.put(
-            &to_key(&key).map_err(Error::SerializationError)?,
-            &to_value(&value).map_err(Error::SerializationError)?,
-        )
-        .await?;
+        txn.put(&to_key(&key)?, &to_value(&value)?).await?;
         Ok(())
     }
     async fn discard_reaction(
@@ -258,16 +238,14 @@ impl<T: ReactionType + DeserializeOwned + Once> ReactionInfo for T {
             reaction_type: TypeName::<T>::new(),
             rid,
         };
-        txn.delete(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        txn.delete(&to_key(&key)?).await?;
 
         let key = UserItemToReactionOnceKeyRef {
             reaction_type: TypeName::<T>::new(),
             user,
             item,
         };
-        txn.delete(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        txn.delete(&to_key(&key)?).await?;
         Ok(())
     }
 }
@@ -292,12 +270,9 @@ impl<T: ReactionType + Once> ReactionInfoOnce for T {
             user,
             item,
         };
-        let value = txn
-            .get(&to_key(&key).map_err(Error::SerializationError)?)
-            .await?;
+        let value = txn.get(&to_key(&key)?).await?;
         if let Some(v) = value {
-            let v: UserItemToReactionOnceValue =
-                from_value(&v).map_err(Error::SerializationError)?;
+            let v: UserItemToReactionOnceValue = from_value(&v)?;
             Ok(v.rid)
         } else {
             Err(Error::UnknownError("TODO: change to not found".into()))

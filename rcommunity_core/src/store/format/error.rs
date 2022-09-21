@@ -31,3 +31,15 @@ impl de::Error for Error {
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
+
+impl From<std::num::TryFromIntError> for Error {
+    fn from(e: std::num::TryFromIntError) -> Self {
+        Error::ConversionError(e)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::JsonError(e)
+    }
+}
