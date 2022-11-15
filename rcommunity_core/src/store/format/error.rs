@@ -7,7 +7,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Conversion error: {0}.")]
-    ConversionError(std::num::TryFromIntError),
+    ConversionError(#[from] std::num::TryFromIntError),
     #[error("Unknown error: {0}.")]
     UnknownError(String),
     #[error("Encountered end-of-string unexpectedly.")]
@@ -15,7 +15,7 @@ pub enum Error {
     #[error("Serialization not supported for type.")]
     NotSupported,
     #[error("serde_json error: {0}.")]
-    JsonError(serde_json::Error),
+    JsonError(#[from] serde_json::Error),
 }
 
 impl ser::Error for Error {
@@ -31,15 +31,3 @@ impl de::Error for Error {
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
-
-impl From<std::num::TryFromIntError> for Error {
-    fn from(e: std::num::TryFromIntError) -> Self {
-        Error::ConversionError(e)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(e: serde_json::Error) -> Self {
-        Error::JsonError(e)
-    }
-}
